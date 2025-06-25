@@ -9,15 +9,15 @@ namespace TestUnit
         public void Calc_power_from_voltage_and_impedance()
         {
             // arrange
-            IVoltage e = new Phasor(100, 0);
+            IVoltageLN e = new Phasor(100, 0);
             IZImp z = Phasor.Convert(new Complex(3, 4));
 
             // act
             ICurrent i = EECircuit.Current(e, z);
-            IPower s = EECircuit.Power(e, i);
+            IPowerS1 s = EECircuit.Power(e, i);
 
             // assert
-            IPower res = new Phasor(2000, 53.1);
+            IPowerS1 res = new Phasor(2000, 53.1);
             Assert.True(Checker.EQ(s.Base, res.Base, 0.1, 0.1));
         }
 

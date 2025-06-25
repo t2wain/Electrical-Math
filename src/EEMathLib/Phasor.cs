@@ -14,10 +14,16 @@ namespace EEMathLib
         Phasor Conjugate();
     }
 
-    public interface IVoltage : IPhasor
+    public interface IVoltage : IPhasor { }
+
+    public interface IVoltageLN : IVoltage 
     {
-        IVoltage ToVLL();
-        IVoltage ToVLN();
+        IVoltageLL ToVLL();
+    }
+
+    public interface IVoltageLL : IVoltage 
+    {
+        IVoltageLN ToVLN();
     }
 
     public interface ICurrent : IPhasor 
@@ -36,9 +42,20 @@ namespace EEMathLib
         bool IsInductiveVars { get; }
     }
 
+    public interface IPowerS1 : IPower { }
+
+    public interface IPowerS3 : IPower { }
+
     #endregion
 
-    public struct Phasor : IPhasor, ICurrent, IZImp, IPower, IVoltage
+
+    /// <summary>
+    /// Phasor represents a sinusoidal value of many
+    /// electrical quantities. The interface marks
+    /// the intended electrical value of the phasor.
+    /// </summary>
+    public struct Phasor : IPhasor, ICurrent, IZImp, IPower, 
+        IPowerS1, IPowerS3, IVoltage, IVoltageLL, IVoltageLN
     {
         #region Constructor
 
@@ -87,10 +104,10 @@ namespace EEMathLib
 
         #region IVoltage
 
-        IVoltage IVoltage.ToVLL() =>
+        IVoltageLL IVoltageLN.ToVLL() =>
             this * Math.Sqrt(3);
 
-        IVoltage IVoltage.ToVLN() =>
+        IVoltageLN IVoltageLL.ToVLN() =>
             this / Math.Sqrt(3);
 
         #endregion
