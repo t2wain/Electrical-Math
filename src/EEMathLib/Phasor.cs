@@ -138,15 +138,22 @@ namespace EEMathLib
         /// Power factor is always a positive value. Lead/Lag must also be
         /// specified to create a phasor for power.
         /// </summary>
-        public static Phasor CreatePowerPhasor(double magnitude, double powerfactor, bool isLag) =>
-            new Phasor(magnitude, ConvertPowerFactorToDegree(powerfactor) * (isLag ? 1 : -1));
+        public static IPower CreatePowerPhasorFromApparentPower(double apparentPower, double powerfactor, bool isLag) =>
+            new Phasor(apparentPower, ConvertPowerFactorToDegree(powerfactor) * (isLag ? 1 : -1));
+
+        /// <summary>
+        /// Power factor is always a positive value. Lead/Lag must also be
+        /// specified to create a phasor for power.
+        /// </summary>
+        public static IPower CreatePowerPhasorFromActivePower(IPowerS3 activePower, double powerfactor, bool isLag) =>
+            new Phasor(activePower.ToComplex().Real / powerfactor, ConvertPowerFactorToDegree(powerfactor) * (isLag ? 1 : -1));
 
         /// <summary>
         /// Power factor is always a positive value. Lead/Lag must also be
         /// specified to create a phasor for current. Lead/Lag is relative
         /// to the voltage phasor of a circuit with a default of 0 degree.
         /// </summary>
-        public static Phasor CreateCurrentPhasor(double magnitude, double powerfactor, bool isLag) =>
+        public static ICurrent CreateCurrentPhasor(double magnitude, double powerfactor, bool isLag) =>
             new Phasor(magnitude, ConvertPowerFactorToDegree(powerfactor) * (isLag ? -1 : 1));
 
         /// <summary>

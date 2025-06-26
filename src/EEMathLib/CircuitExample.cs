@@ -8,7 +8,7 @@ namespace EEMathLib
         {
             // given voltage and power at load terminal
             IVoltage vload = new Phasor(33_000 / Math.Sqrt(3), 0);
-            IPower sload = Phasor.CreatePowerPhasor(5_000_000, 0.8, true) / 3;
+            IPower sload = Phasor.CreatePowerPhasorFromApparentPower(5_000_000, 0.8, true).Base / 3;
 
             // line condition
             IZImp lzimp = new Phasor(11.5, 22);

@@ -49,6 +49,18 @@ namespace EEMathLib
         public static IVoltage Voltage(ICurrent amp, IZImp zimp) =>
             amp.Base * zimp.Base;
 
+        /// <summary>
+        /// Calculate voltage at load terminal
+        /// </summary>
+        public static IVoltage CalcVLoad(IVoltage voltSrc, ICurrent loadAmp, IZImp zimp) =>
+            voltSrc.Base - Voltage(loadAmp, zimp).Base;
+
+        /// <summary>
+        /// Calculate percent voltage drop at load terminal
+        /// </summary>
+        public static double CalcVDrop(IVoltage voltSrc, ICurrent loadAmp, IZImp zimp) =>
+            CalcVLoad(voltSrc, loadAmp, zimp).Magnitude / voltSrc.Magnitude * 100;
+
         #endregion
 
         #region Impedance
@@ -90,10 +102,21 @@ namespace EEMathLib
             voltage.Base / zimp.Base;
 
         public static ICurrent Current(IPowerS1 power, IVoltageLN voltage) =>
-            power.Base / voltage.Base;
+            (power.Base / voltage.Base).Conjugate();
 
         public static ICurrent Current(IPowerS3 power, IVoltageLL voltage) =>
-            power.Base / (voltage.Base * Math.Sqrt(3));
+            (power.Base / (voltage.Base * Math.Sqrt(3))).Conjugate();
+
+        /// <summary>
+        /// Calculate load current
+        /// </summary>
+        /// <param name="activePower">Reactive power must be zero</param>
+        public static ICurrent Current(IPowerS3 activePower, IVoltageLL voltage, double powerFactor, bool isLag)
+        {
+            IPowerS3 apparentPower = Phasor.CreatePowerPhasorFromActivePower(activePower, powerFactor, isLag).Base;
+            ICurrent current = Current(apparentPower, voltage);
+            return current;
+        }
 
         #endregion
     }
