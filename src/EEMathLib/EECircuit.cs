@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace EEMathLib
 {
@@ -58,8 +60,14 @@ namespace EEMathLib
         /// <summary>
         /// Calculate percent voltage drop at load terminal
         /// </summary>
-        public static double CalcVDrop(IVoltage voltSrc, ICurrent loadAmp, IZImp zimp) =>
-            CalcVLoad(voltSrc, loadAmp, zimp).Magnitude / voltSrc.Magnitude * 100;
+        public static double CalcPctVDrop(IVoltage voltSrc, ICurrent loadAmp, IZImp zimp) =>
+            (1 - CalcVLoad(voltSrc, loadAmp, zimp).Magnitude / voltSrc.Magnitude) * 100;
+
+        /// <summary>
+        /// Calculate percent voltage drop per IEEE
+        /// </summary>
+        public static double CalcPctVDropIEEE(IVoltage voltSrc, ICurrent loadAmp, IZImp zimp) =>
+            Voltage(loadAmp, zimp).Magnitude / voltSrc.Magnitude * 100;
 
         #endregion
 
@@ -79,7 +87,7 @@ namespace EEMathLib
         /// <param name="power">Single phase power</param>
         /// <param name="voltage">Line-to-neutral voltage</param>
         public static IZImp ZImp(IPowerS1 power, IVoltageLN voltage) =>
-            voltage.Base * voltage.Base / power.Base;
+            (voltage.Base * voltage.Base / power.Base).Conjugate();
 
         /// <summary>
         /// Calculate impedance
@@ -87,7 +95,16 @@ namespace EEMathLib
         /// <param name="power">Three phase power</param>
         /// <param name="voltage">Line-to-line voltage</param>
         public static IZImp ZImp(IPowerS3 power, IVoltageLL voltage) =>
-            voltage.Base * voltage.Base / power.Base;
+            (voltage.Base * voltage.Base / power.Base).Conjugate();
+
+        public static IZImp AddZImpParallel(IEnumerable<IZImp> lstZimp) =>
+            lstZimp
+                .Select(z => z.ToYImp())
+                .Aggregate((a, y) => a.Base + y.Base)
+                .ToZImp();
+
+        public static IZImp AddZImpSeries(IEnumerable<IZImp> lstZimp) =>
+            lstZimp.Aggregate((a, z) => a.Base + z.Base);
 
         #endregion
 
@@ -101,9 +118,15 @@ namespace EEMathLib
         public static ICurrent Current(IVoltage voltage, IZImp zimp) =>
             voltage.Base / zimp.Base;
 
+        /// <summary>
+        /// Calculate current
+        /// </summary>
         public static ICurrent Current(IPowerS1 power, IVoltageLN voltage) =>
             (power.Base / voltage.Base).Conjugate();
 
+        /// <summary>
+        /// Calculate current
+        /// </summary>
         public static ICurrent Current(IPowerS3 power, IVoltageLL voltage) =>
             (power.Base / (voltage.Base * Math.Sqrt(3))).Conjugate();
 

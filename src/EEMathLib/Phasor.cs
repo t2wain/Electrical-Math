@@ -35,7 +35,14 @@ namespace EEMathLib
         bool IsLag(IVoltage voltage = null);
     }
 
-    public interface IZImp : IPhasor { }
+    public interface IYImp : IPhasor 
+    { 
+        IZImp ToZImp();
+    }
+    public interface IZImp : IPhasor 
+    {
+        IYImp ToYImp();
+    }
     public interface IPower : IPhasor 
     {
         double PowerFactor { get; }
@@ -54,7 +61,7 @@ namespace EEMathLib
     /// electrical quantities. The interface marks
     /// the intended electrical value of the phasor.
     /// </summary>
-    public struct Phasor : IPhasor, ICurrent, IZImp, IPower, 
+    public struct Phasor : IPhasor, ICurrent, IZImp, IYImp, IPower, 
         IPowerS1, IPowerS3, IVoltage, IVoltageLL, IVoltageLN
     {
         #region Constructor
@@ -123,6 +130,14 @@ namespace EEMathLib
 
         double IPower.PowerFactor => Math.Cos(Phase);
         bool IPower.IsInductiveVars => Math.Sign(Phase) == 1;
+
+        #endregion
+
+        #region Impedance
+
+        IYImp IZImp.ToYImp() => 1 / this;
+
+        IZImp IYImp.ToZImp() => 1 / this;
 
         #endregion
 
@@ -198,6 +213,11 @@ namespace EEMathLib
         public static Phasor operator /(Phasor left, double scalar) =>
             new Phasor(left.Magnitude / scalar, left.Phase);
 
+        public static Phasor operator /(double scalar, Phasor right) =>
+            new Phasor(scalar / right.Magnitude, -right.Phase);
+
         #endregion
+
+
     }
 }

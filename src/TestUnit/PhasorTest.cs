@@ -75,5 +75,55 @@ namespace TestUnit
             var res = new Phasor(20, -53.1);
             Assert.True(Checker.EQ(i, res, 0.1, 0.1));
         }
+
+        [Fact]
+        public void Phasor_Reciprocal()
+        {
+            // arrange
+            var z = Phasor.Convert(new Complex(3, 4));
+
+            // act
+            var y = 1 / z;
+
+            // assert
+            var res = Phasor.Convert(new Complex(3, -4) / 25);
+            Assert.True(Checker.EQ(y, res, 0.1, 0.1));
+        }
+
+        [Fact]
+        public void Phasor_Addition()
+        {
+            var i1 = new Phasor(40, 20);
+            var i2 = new Phasor(30, -65);
+
+            var i3 = i1 + i2;
+
+            var res = new Phasor(52.05, -15);
+            Assert.True(Checker.EQ(i3, res, 0.1, 0.1));
+        }
+
+        [Fact]
+        public void Phasor_Subtraction()
+        {
+            var i1 = new Phasor(2, 20);
+            var i2 = new Phasor(6, 30);
+
+            var i3 = i2 - i1;
+
+            var res = new Phasor(4.045, 34.9);
+            Assert.True(Checker.EQ(i3, res, 0.1, 0.1));
+        }
+
+        [Fact]
+        public void Phasor_Multiplication()
+        {
+            var p1 = new Phasor(5, 45);
+            var p2 = new Phasor(4, -20);
+
+            var p3 = p1 * p2;
+
+            var res = new Phasor(20, 25);
+            Assert.True(Checker.EQ(p3, res, 0.1, 0.1));
+        }
     }
 }
