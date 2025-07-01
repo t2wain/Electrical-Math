@@ -12,6 +12,7 @@ namespace EEMathLib
         Phasor Base { get; }
         Complex ToComplex();
         Phasor Conjugate();
+        Phasor ShiftPhaseBy(double angle);
     }
 
     public interface IVoltage : IPhasor { }
@@ -106,6 +107,9 @@ namespace EEMathLib
             Complex.FromPolarCoordinates(Magnitude, ConvertDegreeToRadian(Phase));
 
         public Phasor Conjugate() => new Phasor(Magnitude, -Phase);
+
+        public Phasor ShiftPhaseBy(double angle) =>
+            new Phasor(Magnitude, Phase + angle);
 
         #endregion
 

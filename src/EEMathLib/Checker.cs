@@ -1,9 +1,9 @@
-﻿using EEMathLib;
+﻿using System;
 using System.Numerics;
 
-namespace TestUnit
+namespace EEMathLib
 {
-    internal static class Checker
+    public static class Checker
     {
         public static bool EQ(double x, double y, double err) =>
             Math.Abs(x - y) <= err;

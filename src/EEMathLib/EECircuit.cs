@@ -97,12 +97,18 @@ namespace EEMathLib
         public static IZImp ZImp(IPowerS3 power, IVoltageLL voltage) =>
             (voltage.Base * voltage.Base / power.Base).Conjugate();
 
+        /// <summary>
+        /// Combines a set of impedances connected in parallel
+        /// </summary>
         public static IZImp AddZImpParallel(IEnumerable<IZImp> lstZimp) =>
             lstZimp
                 .Select(z => z.ToYImp())
                 .Aggregate((a, y) => a.Base + y.Base)
                 .ToZImp();
 
+        /// <summary>
+        /// Combines a set of impedances connected in series
+        /// </summary>
         public static IZImp AddZImpSeries(IEnumerable<IZImp> lstZimp) =>
             lstZimp.Aggregate((a, z) => a.Base + z.Base);
 
