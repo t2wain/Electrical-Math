@@ -21,7 +21,7 @@ namespace TestUnit
             var t1sbase = 45e6;
             var t1vbase = 13.8e3;
             var t1base = new PUBase3P(t1sbase, t1vbase); // 45MVA, 13.8kV
-            IZImp t1zpu_rate = Phasor.Convert(new Complex(0, 0.05));
+            IZImp t1zpu_rate = (Phasor) new Complex(0, 0.05);
 
             // assert zone 1 base impedance
             Assert.True(Checker.EQ(t1base.Impedance, 4.232, 0.001));
@@ -41,12 +41,12 @@ namespace TestUnit
             Assert.True(Checker.EQ(base2.Impedance, 105.8, 0.1));
 
             // line impedance in zone 2
-            IZImp l2z = Phasor.Convert(new Complex(5, 15));
+            IZImp l2z = (Phasor)new Complex(5, 15);
 
             // convert line impdance to base 2
             IZImp l2pu = base2.ToPU(l2z);
 
-            IZImp l2res = Phasor.Convert(new Complex(0.047, 0.142));
+            IZImp l2res = (Phasor)new Complex(0.047, 0.142);
             Assert.True(Checker.EQ(l2pu.Base, l2res.Base, 0.2, 0.2));
 
             // T2 nameplate rating

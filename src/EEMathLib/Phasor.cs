@@ -81,7 +81,7 @@ namespace EEMathLib
         public Phasor(double magnitude, double phase)
         {
             Magnitude = magnitude;
-            Phase = phase;
+            Phase = ConvertDegreeToStandard(phase);
         }
 
         #endregion
@@ -154,6 +154,12 @@ namespace EEMathLib
             new Phasor(value.Magnitude, ConvertRadianToDegree(value.Phase));
 
         /// <summary>
+        /// Convert tuple to phasor
+        /// </summary>
+        public static Phasor Convert((double Magnitude, double Phase) value) =>
+            new Phasor(value.Magnitude, value.Phase);
+
+        /// <summary>
         /// Power factor is always a positive value. Lead/Lag must also be
         /// specified to create a phasor for power.
         /// </summary>
@@ -190,9 +196,15 @@ namespace EEMathLib
         public static double ConvertRadianToDegree(double radian)
         {
             var degree = radian % (2 * Math.PI) / Math.PI * 180;
-            if (Math.Abs(degree) > 180)
-                return (360 - Math.Abs(degree)) * Math.Sign(degree) * -1;
-            else return degree;
+            return ConvertDegreeToStandard(degree);
+        }
+
+        public static double ConvertDegreeToStandard(double degree)
+        {
+            var d = degree % 360;
+            if (Math.Abs(d) > 180)
+                return (360 - Math.Abs(d)) * Math.Sign(d) * -1;
+            else return d;
         }
 
         #endregion
@@ -220,8 +232,12 @@ namespace EEMathLib
         public static Phasor operator /(double scalar, Phasor right) =>
             new Phasor(scalar / right.Magnitude, -right.Phase);
 
+        public static implicit operator Phasor((double Magnitude, double Phase) value) =>
+            new Phasor(value.Magnitude, value.Phase);
+
+        public static implicit operator Phasor(Complex value) =>
+            Convert(value);
+
         #endregion
-
-
     }
 }

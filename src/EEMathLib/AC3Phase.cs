@@ -5,28 +5,28 @@
         #region Voltage
 
         /// <summary>
-        /// Phase voltage
+        /// Phase voltage (string)
         /// </summary>
         IVoltage Us1 { get; }
         /// <summary>
-        /// Phase voltage
+        /// Phase voltage (string)
         /// </summary>
         IVoltage Us2 { get; }
         /// <summary>
-        /// Phase voltage
+        /// Phase voltage (string)
         /// </summary>
         IVoltage Us3 { get; }
 
         /// <summary>
-        /// Line voltage
+        /// Line voltage between L1 and L2
         /// </summary>
         IVoltageLL U12 { get; }
         /// <summary>
-        /// Line voltage
+        /// Line voltage between L2 and L3
         /// </summary>
         IVoltageLL U23 { get; }
         /// <summary>
-        /// Line voltage
+        /// Line voltage between L3 and L1
         /// </summary>
         IVoltageLL U31 { get; }
 
@@ -35,7 +35,7 @@
         #region Impedance
 
         /// <summary>
-        /// Phase impedance
+        /// Phase impedance (string)
         /// </summary>
         IZImp Zs { get; }
 
@@ -44,28 +44,28 @@
         #region Current
 
         /// <summary>
-        /// Phase current
+        /// Phase current (string)
         /// </summary>
         ICurrent Is1 { get; }
         /// <summary>
-        /// Phase current
+        /// Phase current (string)
         /// </summary>
         ICurrent Is2 { get; }
         /// <summary>
-        /// Phase current
+        /// Phase current (string)
         /// </summary>
         ICurrent Is3 { get; }
 
         /// <summary>
-        /// Line current
+        /// Line current on L1
         /// </summary>
         ICurrent I1 { get; }
         /// <summary>
-        /// Line current
+        /// Line current on L2
         /// </summary>
         ICurrent I2 { get; }
         /// <summary>
-        /// Line current
+        /// Line current on L3
         /// </summary>
         ICurrent I3 { get; }
 
@@ -90,8 +90,6 @@
         /// Phase current, same as Is3
         /// </summary>
         ICurrent I31 { get; }
-        IWye TransformToWye(IZImp zs);
-        IDelta TransformToDelta(IZImp zs);
     }
 
     /// <summary>
@@ -100,12 +98,32 @@
     /// </summary>
     public interface IWye : IAC3PhaseMixin 
     {
-        IWye TransformToWye(IZImp zs);
-        IDelta TransformToDelta(IZImp zs);
+        /// <summary>
+        /// Same as Us1
+        /// </summary>
+        IVoltageLN U1n { get; }
+        /// <summary>
+        /// Same as Us2
+        /// </summary>
+        IVoltageLN U2n { get; }
+        /// <summary>
+        /// Same as Us3
+        /// </summary>
+        IVoltageLN U3n { get; }
+
     }
 
     public abstract class AC3Phase : IAC3PhaseMixin, IDelta, IWye
     {
+        /// <summary>
+        /// U12, U23, U31 line voltage phase shift in degree.
+        /// </summary>
+        public static double WyeDeltaXfmrPhaseShift => -30;
+        /// <summary>
+        /// U12, U23, U31 line voltage phase shift in degree.
+        /// </summary>
+        public static double DeltaWyeXfmrPhaseShift => 30;
+
         #region Voltage
 
         /// <summary>
@@ -203,38 +221,24 @@
         /// </summary>
         ICurrent IDelta.I31 => I31;
 
-        /// <summary>
-        /// From Delta to Wye
-        /// </summary>
-        IWye IDelta.TransformToWye(IZImp zs) => new Wye(Us1.ShiftPhaseBy(-30), zs);
-        /// <summary>
-        /// From Delta to Delta
-        /// </summary>
-        /// <param name="zs"></param>
-        /// <returns></returns>
-        IDelta IDelta.TransformToDelta(IZImp zs) => new Delta(Us1.ShiftPhaseBy(0), zs);
-
         #endregion
 
         #region Wye
 
-        /// <summary>
-        /// From Wye to Delta
-        /// </summary>
-        IDelta IWye.TransformToDelta(IZImp zs) => new Delta(Us1.ShiftPhaseBy(30), zs);
-        /// <summary>
-        /// From Wye to Wye
-        /// </summary>
-        /// <param name="zs"></param>
-        /// <returns></returns>
-        IWye IWye.TransformToWye(IZImp zs) => new Wye(Us1.ShiftPhaseBy(0), zs);
+        protected IVoltageLN U1n { get; set; }
+        protected IVoltageLN U2n { get; set; }
+        protected IVoltageLN U3n { get; set; }
+
+        IVoltageLN IWye.U1n => U1n;
+        IVoltageLN IWye.U2n => U2n;
+        IVoltageLN IWye.U3n => U3n;
 
         #endregion
     }
 
     /// <summary>
     /// Three-phase system consists of four conductors, L1, L2, L3, and Ln.
-    /// The voltages between conductors are U12, U23, and U31.
+    /// The line voltages between conductors are U12, U23, and U31.
     /// </summary>
     public class Wye : AC3Phase, IWye
     {
@@ -246,6 +250,10 @@
             Us1 = u1;
             Us2 = u1.ShiftPhaseBy(-120);
             Us3 = u1.ShiftPhaseBy(120);
+
+            U1n = Us1.Base;
+            U2n = Us2.Base;
+            U3n = Us3.Base;
 
             Zs = zs;
 
@@ -266,7 +274,7 @@
 
     /// <summary>
     /// Three-phase system consists of three conductors, L1, L2, and L3.
-    /// The voltages between conductors are U12, U23, and U31.
+    /// The line voltages between conductors are U12, U23, and U31.
     /// </summary>
     public class Delta : AC3Phase, IDelta
     {
@@ -285,10 +293,12 @@
             U23 = Us2.Base;
             U31 = Us3.Base;
 
+            // Phase currents
             I12 = Is1 = Us1.Base / Zs.Base;
             I23 = Is2 = Us2.Base / Zs.Base;
             I31 = Is3 = Us3.Base / Zs.Base;
 
+            // Line currents
             I1 = I12.Base - I31.Base;
             I2 = I23.Base - I12.Base;
             I3 = I31.Base - I23.Base;

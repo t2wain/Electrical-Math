@@ -125,5 +125,29 @@ namespace TestUnit
             var res = new Phasor(20, 25);
             Assert.True(Checker.EQ(p3, res, 0.1, 0.1));
         }
+
+        [Fact]
+        public void Tuple_Implicit_Conversion()
+        {
+            (double Magnitude, double Phase) value = (1.0, 0.0);
+            Phasor p = value;
+            Assert.True(Checker.EQ(value.Magnitude, p.Magnitude, 0.01));
+            Assert.True(Checker.EQ(value.Phase, p.Phase, 0.01));
+
+            var value2 = (1.0, 0.0);
+            p = value2;
+            Assert.True(Checker.EQ(value2.Item1, p.Magnitude, 0.01));
+            Assert.True(Checker.EQ(value2.Item2, p.Phase, 0.01));
+        }
+
+        [Fact]
+        public void Complex_Implicit_Conversion()
+        {
+            var v = new Complex(1, 0);
+            Phasor p = v;
+
+            Assert.True(Checker.EQ(v.Magnitude, p.Magnitude, 0.01));
+            Assert.True(Checker.EQ(v.Phase, p.Phase, 0.01));
+        }
     }
 }
