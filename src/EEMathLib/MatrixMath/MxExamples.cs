@@ -1,12 +1,14 @@
 ﻿using EEMathLib.DTO;
 using MathNet.Numerics.LinearAlgebra;
 using System;
-using System.Linq;
 
 namespace EEMathLib.MatrixMath
 {
     public class MxExamples
     {
+        /// <summary>
+        /// Solve Ax = b
+        /// </summary>
         public bool Ex1()
         {
             var m = new MxDTO
@@ -66,6 +68,9 @@ namespace EEMathLib.MatrixMath
             return c;
         }
 
+        /// <summary>
+        /// Solver Ax = b using LU decomposition.
+        /// </summary>
         public bool Ex2()
         {
             var m = new MxDTO
@@ -133,12 +138,9 @@ namespace EEMathLib.MatrixMath
             return c;
         }
 
-
-        public bool Ex3()
+        protected MxDTO Ex3Data => new MxDTO
         {
-            var m = new MxDTO
-            {
-                Matrices = new[] {
+            Matrices = new[] {
                     new MxDTO {
                         ID = "A",
                         RowSize = 2,
@@ -173,16 +175,113 @@ namespace EEMathLib.MatrixMath
                         }
                     },
                 }
+        };
+
+        /// <summary>
+        /// Gauss-Seidel iteration example.
+        /// </summary>
+        public bool Ex3()
+        {
+            var m = Ex3Data;
+
+            var A = MX.ParseMatrix(m.Matrices[0]);
+            var y = MX.ParseMatrix(m.Matrices[1]);
+
+            var res = MX.GaussSeidel(A, y);
+
+            if (res.IsError)
+                throw new Exception(res.ErrorMessage);
+
+            var d = res.Data;
+            d.MapInplace(entry => Math.Round(entry, 4));
+            var x = MX.ParseMatrix(m.Matrices[2]);
+            var c = d.Equals(x);
+
+            return c;
+        }
+
+        /// <summary>
+        /// Gauss-Seidel iteration example using matrix operation.
+        /// </summary>
+        public bool Ex3a()
+        {
+            var m = Ex3Data;
+
+            var A = MX.ParseMatrix(m.Matrices[0]);
+            var y = MX.ParseMatrix(m.Matrices[1]);
+
+            var res = MX.GaussSeidelByMatrix(A, y);
+
+            if (res.IsError)
+                throw new Exception(res.ErrorMessage);
+
+            var d = res.Data;
+            d.MapInplace(entry => Math.Round(entry, 4));
+            var x = MX.ParseMatrix(m.Matrices[2]);
+            var c = d.Equals(x);
+
+            return c;
+        }
+
+        /// <summary>
+        /// Gauss-Seidel divergence example.
+        /// </summary>
+        public bool Ex4()
+        {
+            var m = new MxDTO
+            {
+                Matrices = new[] {
+                    new MxDTO {
+                        ID = "A",
+                        RowSize = 2,
+                        ColumnSize = 2,
+                        EntriesType = MxDTO.ROW_ENTRIES,
+                        Entries = new double[]
+                        {
+                             5, 10,
+                             9,  2,
+                        }
+                    },
+                    new MxDTO
+                    {
+                        ID = "y",
+                        RowSize = 2,
+                        ColumnSize = 1,
+                        EntriesType = MxDTO.COLUMN_ENTRIES,
+                        Entries = new double[]
+                        {
+                            6, 3
+                        }
+                    },
+                    new MxDTO
+                    {
+                        ID = "x",
+                        RowSize = 2,
+                        ColumnSize = 1,
+                        EntriesType = MxDTO.COLUMN_ENTRIES,
+                        Entries = new double[]
+                        {
+                            0.225, 0.4875
+                        }
+                    },
+                }
             };
 
             var A = MX.ParseMatrix(m.Matrices[0]);
             var y = MX.ParseMatrix(m.Matrices[1]);
 
-            var res = MX.GaussSeidel(A, y, 1e-4, 10);
+            var res = MX.GaussSeidel(A, y);
+            // Gauss-Seidel method diverges.
+            var c  = res.IsError && res.Error == ErrorEnum.Divergence;
 
-            res.MapInplace(entry => Math.Round(entry, 4));
+            res = MX.GaussSeidelByMatrix(A, y);
+            c = c && res.IsError && res.Error == ErrorEnum.Divergence;
+
+            // If the method diverges, we can still use the Solve method.
+            var xres = A.Solve(y);
+            xres.MapInplace(entry => Math.Round(entry, 4), Zeros.Include);
             var x = MX.ParseMatrix(m.Matrices[2]);
-            var c = res.Equals(x);
+            c = c && xres.Equals(x);
 
             return c;
         }

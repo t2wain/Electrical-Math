@@ -68,24 +68,38 @@ namespace TestUnit
         }
 
         [Fact]
-        public void Should_run_ex1()
+        public void Solve_Ax_b()
         {
             var ex = new MxExamples();
             Assert.True(ex.Ex1());
         }
 
         [Fact]
-        public void Should_run_ex2()
+        public void Solve_Ax_b_with_LU()
         {
             var ex = new MxExamples();
             Assert.True(ex.Ex2());
         }
 
         [Fact]
-        public void Should_run_ex3()
+        public void Solve_Ax_b_with_Gauss_Seidel_iteration()
         {
             var ex = new MxExamples();
             Assert.True(ex.Ex3());
+        }
+
+        [Fact]
+        public void Solve_Ax_b_with_Gauss_Seidel_iteration_matrix()
+        {
+            var ex = new MxExamples();
+            Assert.True(ex.Ex3a());
+        }
+
+        [Fact]
+        public void Solve_Ax_b_diverge_with_Gauss_Seidel_iteration()
+        {
+            var ex = new MxExamples();
+            Assert.True(ex.Ex4());
         }
     }
 }
