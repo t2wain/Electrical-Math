@@ -186,9 +186,79 @@ namespace EEMathLib.MatrixMath
                     Error = ErrorEnum.MaxIteration,
                     ErrorMessage = "Max iterations reached without convergence",
                 };
+        }
 
+        /// <summary>
+        /// Solve Ax = b with Newton-Raphson iteration method
+        /// </summary>
+        /// <param name="J">Function to calculate Jacobian matrix given x</param>
+        /// <param name="maxErr">default to 1e-4</param>
+        /// <param name="maxIteration">default to 100</param>
+        public static Result<Matrix<double>> NewtonRaphson(Matrix<double> A, Matrix<double> b,
+            Func<Matrix<double>, Matrix<double>> J,
+            double maxErr = 1e-4, int maxIteration = 100)
+        {
+            // x result, initial guess is zero
+            var res = CreateMatrix.Dense(b.RowCount, b.ColumnCount, 0.0);
+            // track error for each variable
+            var verr = CreateMatrix.Dense(b.RowCount, b.ColumnCount, 0.0);
+            // exit condition
+            var found = false;
 
+            var i = 0; // iteration counter
+            while (i++ < maxIteration)
+            {
+                // main calculation of each iteration
+                var dbk = b - (A * res); // calculate delta y
+                var jk = J(res); // calculate Jacobian matrix
+                var dxk = jk.Inverse() * dbk; // calculate delta x
+                var resNext = res + dxk; // calculate next x value
 
+                // calculate difference between new estimate and previous estimate
+                var err = resNext - res;
+                err.MapInplace(v => Math.Abs(v));
+                if (err.ForAll(v => v <= maxErr))
+                {
+                    found = true;
+                    break;
+                }
+
+                // save new x estimate
+                res.SetSubMatrix(0, 0, resNext); 
+
+                // check for divergence
+                if (i == 1)
+                    verr.SetSubMatrix(0, 0, err); // save first error value
+                else if (i % 5 == 0)
+                {
+                    var ecnt = err.Column(0).AsEnumerable().Zip(
+                        verr.Column(0).AsEnumerable(),
+                        (ne, ce) => ne < ce ? 0 : 1
+                    ).Sum();
+
+                    if (ecnt == 0)
+                        verr.SetSubMatrix(0, 0, err);
+                    else
+                        return new Result<Matrix<double>>
+                        {
+                            IterationStop = i,
+                            Error = ErrorEnum.Divergence,
+                            ErrorMessage = "Divergence detected",
+                        };
+
+                }
+
+            }
+
+            if (found)
+                return new Result<Matrix<double>> { IterationStop = i, Data = res };
+            else
+                return new Result<Matrix<double>>
+                {
+                    IterationStop = i,
+                    Error = ErrorEnum.MaxIteration,
+                    ErrorMessage = "Max iterations reached without convergence",
+                };
         }
     }
 }
