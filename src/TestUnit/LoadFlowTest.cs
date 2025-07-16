@@ -15,7 +15,16 @@ namespace TestUnit
         public void Ex2() 
         {
             var c = LFExample.Ex2();
-            Assert.True(c, "Load flow ex2 failed.");
+            Assert.True(c);
         }
+
+        [Fact]
+        public void Ex3()
+        {
+            var c = LFExample.Ex3();
+            Assert.True(c, "Load flow calculation failed");
+        }
+
+
     }
 }

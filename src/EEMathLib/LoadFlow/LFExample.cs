@@ -120,20 +120,30 @@ namespace EEMathLib.LoadFlow
         }
 
         /// <summary>
-        /// Calculate load flow using Gauss-Siedel method
+        /// Calculate bus "2" voltage at iteration 1.
         /// </summary>
         public static bool Ex2()
         {
             var nw = CreateNetwork();
-            var buses = LFGaussSiedel.Solve(nw, 1);
-            var dbus = buses.ToDictionary(b => b.BusData.ID);
-            var bus = dbus["2"];
+            var buses = LFGaussSiedel.Initialize(nw.Buses);
+            var bus = buses.FirstOrDefault(b => b.BusData.ID == "2");
+            var v = LFGaussSiedel.CalcVoltage(bus, nw.YMatrix, buses);
 
             var v2 = new Phasor(0.8746, -15.675);
-            var e2 = Phasor.Convert(bus.BusVoltage);
+            var e2 = (Phasor)v;
+
             var c = Checker.EQ(v2, e2, 0.0001, 0.001);
 
-            return true;
+            return c;
+        }
+
+        public static bool Ex3()
+        {
+            var nw = CreateNetwork();
+            var res = LFGaussSiedel.Solve(nw);
+
+            var c = !res.IsError;
+            return c;
         }
     }
 }
