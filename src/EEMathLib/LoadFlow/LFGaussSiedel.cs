@@ -7,8 +7,10 @@ using System;
 
 namespace EEMathLib.LoadFlow
 {
-    public abstract class LFGaussSiedel
+    public static class LFGaussSiedel
     {
+        #region DTO
+
         public class ErrVal
         {
             public double VErr { get; set; }
@@ -23,46 +25,49 @@ namespace EEMathLib.LoadFlow
             public BusTypeEnum BusType { get; set; }
             public Complex BusVoltage { get; set; }
             public Complex Sbus { get; set; }
-            public ErrVal Err { get; set; }
-            public ErrVal ErrRef { get; set; }
+            public ErrVal Err { get; set; } = new ErrVal();
+            public ErrVal ErrRef { get; set; } = new ErrVal();
         }
 
-        public IEnumerable<BusResult> Calculate(EENetwork network)
+        #endregion
+
+        public static IEnumerable<BusResult> Solve(EENetwork network, int maxIteration = 100)
         {
-            var buses = new List<BusResult>(
-                network.Buses
-                    .OrderBy(b => b.BusIndex)
-                    .Select(b => new BusResult { 
-                        BusData = b, 
+            // DTO
+            var buses = network.Buses
+                    .Select(b => new BusResult
+                    {
+                        BusData = b,
                         BusType = b.BusType,
-                        BusVoltage = b.BusVoltage, 
-                        Sbus = b.Sbus 
+                        BusVoltage = new Complex(b.Voltage > 0 ? b.Voltage : 1.0, 0),
+                        Sbus = new Complex(b.Pgen - b.Pload, b.Qgen - b.Qload)
                     })
-            );
-            var N = buses.Count;
+                    .ToList();
+
             var Y = network.YMatrix;
 
-            var verr = CreateVector.Dense(N, new Complex(0, 0));
-
+            BusResult slackBus = null;
             var i = 0;
-            while(i++ < 100)
+            while (i++ < maxIteration)
             {
-                foreach(var k in Enumerable.Range(0, N))
+                // calculate Vk, Ak, Qk for each bus
+                foreach (var bus in buses)
                 {
-                    var bus = buses[k];
                     if (bus.BusType == BusTypeEnum.PQ) // load bus
                     {
                         var vnxt = CalcVoltage(bus, Y, buses);
                         UpdateVErr(bus, bus.BusVoltage.Magnitude, vnxt.Magnitude, i);
                         UpdateAErr(bus, bus.BusVoltage.Phase, vnxt.Phase, i);
+                        // update Vk, Ak
                         bus.BusVoltage = vnxt;
                     }
                     else if (bus.BusType == BusTypeEnum.PV) // voltage controlled bus
                     {
                         // calculate Qk
                         var sk = CalcPower(bus, Y, buses);
-                        var (snxt, bt) = CalcMaxSbus(bus, sk);
+                        var (snxt, bt) = CalcMaxQk(bus, sk);
                         UpdateQErr(bus, bus.Sbus.Imaginary, snxt.Imaginary, i);
+                        // update Sbus
                         bus.Sbus = snxt;
 
                         // calculate Vbus
@@ -71,16 +76,21 @@ namespace EEMathLib.LoadFlow
 
                         if (bt == BusTypeEnum.PV)
                         {
-                            // update phase angle
+                            // maintain bus controlled voltage and update Ak
                             bus.BusVoltage = Complex.FromPolarCoordinates(bus.BusVoltage.Magnitude, vnxt.Phase);
                         }
                         else
                         {
-                            bus.BusType = BusTypeEnum.PQ; // change to PQ bus
+                            // required switching to PQ bus
+                            // since Qk is outside limits of Qgen range (min and max)
+                            bus.BusType = BusTypeEnum.PQ;
                             UpdateVErr(bus, bus.BusVoltage.Magnitude, vnxt.Magnitude, i);
-                            bus.BusVoltage = vnxt; // use the calculated voltage
+                            // update Vk, Ak
+                            bus.BusVoltage = vnxt;
                         }
                     }
+                    else if (bus.BusType == BusTypeEnum.Slack)
+                        slackBus = bus; // save slack bus for later calculation
 
                     if (IsConverged(buses) || IsDiverged(buses, i))
                         break;
@@ -88,18 +98,23 @@ namespace EEMathLib.LoadFlow
             }
 
             // Calculate Pk, Qk for slack bus
-            var slackBus = buses[0];
             slackBus.Sbus = CalcPower(slackBus, Y, buses);
 
             return buses;
         }
 
-        public Complex CalcVoltage(BusResult bus, Matrix<Complex> Y, IEnumerable<BusResult> buses)
+        #region Calculation
+
+        /// <summary>
+        /// Calculate Vk, Ak given Pk, Qk for bus k.
+        /// </summary>
+        /// <returns>Voltage Sk</returns>
+        static Complex CalcVoltage(BusResult bus, Matrix<Complex> Y, IEnumerable<BusResult> buses)
         {
             var k = bus.BusIndex;
             var yk = Y[k, k];
-            var pk = bus.Sbus;
-            var vk = bus.BusVoltage;
+            var sk = bus.Sbus; // given Pk, Qk for bus k
+            var vk = bus.BusVoltage; // calculated voltage from previous iteration
             var sv = buses
                 .Where(b => b.BusIndex != k)
                 .Select(b =>
@@ -110,14 +125,19 @@ namespace EEMathLib.LoadFlow
                 })
                 .Aggregate((v1, v2) => v1 + v2);
 
-            var vknxt = 1 / yk * (pk / vk.Conjugate() - sv);
-            vknxt = 1 / yk * (pk / vknxt.Conjugate() - sv);
+            // calculate next voltage value
+            var vknxt = 1 / yk * (sk / vk.Conjugate() - sv); // using vk
+            vknxt = 1 / yk * (sk / vknxt.Conjugate() - sv); // using vknxt
             return vknxt;
         }
 
-        public Complex CalcPower(BusResult bus, Matrix<Complex> Y, IEnumerable<BusResult> buses)
+        /// <summary>
+        /// Calculate Sk for bus k.
+        /// </summary>
+        /// <returns>Apparent power Sk</returns>
+        static Complex CalcPower(BusResult bus, Matrix<Complex> Y, IEnumerable<BusResult> buses)
         {
-            var vk = bus.BusVoltage;
+            var vk = bus.BusVoltage; // given bus voltage
             var sv = buses
                 .Select(b =>
                 {
@@ -130,53 +150,67 @@ namespace EEMathLib.LoadFlow
             return sk;
         }
 
-        protected (Complex SBus, BusTypeEnum BustType) CalcMaxSbus(BusResult bus, Complex sk)
+        /// <summary>
+        /// Calculate Qk for given Sk based on Qgen limits.
+        /// </summary>
+        /// <returns>Tuples of Sk and the bus type</returns>
+        static (Complex SBus, BusTypeEnum BustType) CalcMaxQk(BusResult bus, Complex sk)
         {
             var qk = sk.Imaginary;
-            var qg = qk + bus.BusData.Qload;
+
+            // required Qgen to maintain given bus voltage
+            var qgen = qk + bus.BusData.Qload;
 
             // calculate Sbus
             if (qk < bus.BusData.Qmin)
-                return (new Complex(bus.BusData.Pload, bus.BusData.Qmin), BusTypeEnum.PQ);
+                // use definded Qgen min and change to PQ bus
+                return (new Complex(sk.Real, bus.BusData.Qmin), BusTypeEnum.PQ);
             else if (qk > bus.BusData.Qmax)
-                return (new Complex(bus.BusData.Pload, bus.BusData.Qmax), BusTypeEnum.PQ);
-            else return (new Complex(bus.BusData.Pload, qk), BusTypeEnum.PV);
+                // use definded Qgen max and change to PQ bus
+                return (new Complex(sk.Real, bus.BusData.Qmax), BusTypeEnum.PQ);
+            else
+                // required Qgen is within limits to maintain bus voltage
+                return (sk, BusTypeEnum.PV);
         }
 
-        protected void UpdateVErr(BusResult bus, double vcur, double vnxt, int iteration)
+        #endregion
+
+        #region Track error and convergence
+
+        static void UpdateVErr(BusResult bus, double vcur, double vnxt, int iteration)
         {
             bus.Err.VErr = Math.Abs(vcur - vnxt);
             if (iteration == 1 || iteration % 5 == 0)
                 bus.ErrRef.VErr = bus.Err.VErr;
         }
 
-        protected void UpdateAErr(BusResult bus, double acur, double anext, int iteration)
+        static void UpdateAErr(BusResult bus, double acur, double anext, int iteration)
         {
             bus.Err.AErr = Math.Abs(anext - acur);
             if (iteration == 1 || iteration % 5 == 0)
                 bus.ErrRef.AErr = bus.Err.AErr;
         }
 
-        protected void UpdateQErr(BusResult bus, double qcur, double qnext, int iteration)
+        static void UpdateQErr(BusResult bus, double qcur, double qnext, int iteration)
         {
             bus.Err.QErr = Math.Abs(qcur - qnext);
             if (iteration == 1 || iteration % 5 == 0)
                 bus.ErrRef.QErr = bus.Err.QErr;
         }
 
-        protected bool IsConverged(IEnumerable<BusResult> buses, double threshold = 0.001)
+        static bool IsConverged(IEnumerable<BusResult> buses, double threshold = 0.001)
         {
-            var b = false;
-            foreach (var bus in buses)
+            var cv = false;
+            foreach (var bus in buses.Where(b => b.BusType != BusTypeEnum.Slack))
             {
-                b = (bus.Err.VErr / bus.BusVoltage.Magnitude) <= threshold;
-                b = b && (bus.Err.AErr / bus.BusVoltage.Phase) <= threshold;
-                b = b && (bus.Err.QErr / bus.Sbus.Imaginary) <= threshold;
+                cv = bus.BusVoltage.Magnitude > 0 && (bus.Err.VErr / bus.BusVoltage.Magnitude) <= threshold;
+                cv = cv && bus.BusVoltage.Phase > 0 && (bus.Err.AErr / bus.BusVoltage.Phase) <= threshold;
+                cv = cv && bus.Sbus.Imaginary > 0 && (bus.Err.QErr / bus.Sbus.Imaginary) <= threshold;
             }
-            return b;
+            return cv;
         }
 
-        protected bool IsDiverged(IEnumerable<BusResult> buses, int iteration)
+        static bool IsDiverged(IEnumerable<BusResult> buses, int iteration)
         {
             if (iteration % 5 != 0)
                 return false;
@@ -190,5 +224,7 @@ namespace EEMathLib.LoadFlow
             }
             return b;
         }
+
+        #endregion
     }
 }

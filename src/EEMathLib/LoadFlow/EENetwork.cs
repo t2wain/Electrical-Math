@@ -11,15 +11,17 @@ namespace EEMathLib.LoadFlow
         {
             this.Buses = new List<EEBus>(buses);
             this.Lines = new List<EELine>(lines);
-            this.BuildIndex();
-            this.BuildYImp();
         }
 
         public IEnumerable<EEBus> Buses { get; protected set; }
         public IEnumerable<EELine> Lines { get; protected set; }
         public Matrix<Complex> YMatrix { get; protected set; }
 
-        protected void BuildIndex() 
+        /// <summary>
+        /// Assign consecutive indices to buses, 
+        /// starting from 0 for slack bus.
+        /// </summary>
+        public void BuildIndex() 
         {
             var qbus = Buses
                 .OrderBy(b => b.BusType == BusTypeEnum.Slack ? 0 : 1)
@@ -28,7 +30,26 @@ namespace EEMathLib.LoadFlow
                 .ToList();
         }
 
-        protected void BuildYImp()
+        public void AssignBusToLine()
+        {
+            var d = Buses.ToDictionary(b => b.ID);
+            foreach (var l in Lines)
+            {
+                if (d.TryGetValue(l.FromBusID, out var fromBus))
+                {
+                    l.FromBus = fromBus;
+                }
+                if (d.TryGetValue(l.ToBusID, out var toBus))
+                {
+                    l.ToBus = toBus;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Build Y matrix from lines.
+        /// </summary>
+        public void BuildYImp()
         {
             var N = Buses.Count();
             var Y = Matrix<Complex>.Build.Dense(N, N, Complex.Zero);
@@ -36,11 +57,12 @@ namespace EEMathLib.LoadFlow
             {
                 var i = l.FromBus.BusIndex;
                 var j = l.ToBus.BusIndex;
-                var zl = 1 / l.ZImp + l.YImp;
+                var zl = (1 / l.ZImp) + (l.YImp / 2);
+                var z = 1 / l.ZImp;
                 Y[i, i] += zl;
                 Y[j, j] += zl;
-                Y[i, j] -= zl;
-                Y[j, i] -= zl;
+                Y[i, j] -= z;
+                Y[j, i] -= z;
             }
             YMatrix = Y;
         }

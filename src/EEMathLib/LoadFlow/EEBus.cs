@@ -1,6 +1,4 @@
-﻿using System.Numerics;
-
-namespace EEMathLib.LoadFlow
+﻿namespace EEMathLib.LoadFlow
 {
     public enum BusTypeEnum
     {
@@ -17,6 +15,9 @@ namespace EEMathLib.LoadFlow
         int EntityType { get; }
     }
 
+    /// <summary>
+    /// Bus input data for load flow analysis.
+    /// </summary>
     public class EEBus : IEntity
     {
         public int BusIndex { get; set; }
@@ -25,21 +26,12 @@ namespace EEMathLib.LoadFlow
         public BusTypeEnum BusType { get; set; }
 
         public double Voltage { get; set; }
-        public double Angle { get; set; } // degree
-        public Complex BusVoltage => new Phasor(Voltage, Angle).ToComplex();
-
-        public double Pbus { get; set; }
-        public double Qbus { get; set; }
-        public Complex Sbus => new Complex(Pbus, Qbus);
 
         public double Pload { get; set; }
         public double Qload { get; set; }
-        public Complex Sload => new Complex(Pload, (BusType == BusTypeEnum.PQ ? -1 : 1) * 0);
-
 
         public double Pgen { get; set; }
         public double Qgen { get; set; }
-        public Complex Sgen => new Complex(Pgen, Qgen);
 
         public double Qmin { get; set; }
         public double Qmax { get; set; }
