@@ -11,14 +11,14 @@ namespace EEMathLib.MatrixMath
         /// </summary>
         public bool Ex1()
         {
-            var m = new MxDTO
+            var m = new MxDTO<double>
             {
                 Matrices = new[] {
-                    new MxDTO {
+                    new MxDTO<double> {
                         ID = "A",
                         RowSize = 3,
                         ColumnSize = 3,
-                        EntriesType = MxDTO.ROW_ENTRIES,
+                        EntriesType = MxDTO<double>.ROW_ENTRIES,
                         Entries = new double[]
                         {
                             1, -1, -1,
@@ -26,23 +26,23 @@ namespace EEMathLib.MatrixMath
                             2, -1,  1
                         }
                     },
-                    new MxDTO
+                    new MxDTO<double>
                     {
                         ID = "b",
                         RowSize = 3,
                         ColumnSize = 1,
-                        EntriesType = MxDTO.COLUMN_ENTRIES,
+                        EntriesType = MxDTO<double>.COLUMN_ENTRIES,
                         Entries = new double[]
                         {
                             2, 16, 9,
                         }
                     },
-                    new MxDTO
+                    new MxDTO<double>
                     {
                         ID = "x",
                         RowSize = 3,
                         ColumnSize = 1,
-                        EntriesType = MxDTO.COLUMN_ENTRIES,
+                        EntriesType = MxDTO<double>.COLUMN_ENTRIES,
                         Entries = new double[]
                         {
                             3, -1, 2
@@ -73,14 +73,14 @@ namespace EEMathLib.MatrixMath
         /// </summary>
         public bool Ex2()
         {
-            var m = new MxDTO
+            var m = new MxDTO<double>
             {
                 Matrices = new[] {
-                    new MxDTO {
+                    new MxDTO<double> {
                         ID = "A",
                         RowSize = 3,
                         ColumnSize = 3,
-                        EntriesType = MxDTO.ROW_ENTRIES,
+                        EntriesType = MxDTO<double>.ROW_ENTRIES,
                         Entries = new double[]
                         {
                              2,  1,  3,
@@ -88,23 +88,23 @@ namespace EEMathLib.MatrixMath
                             -2,  5,  5
                         }
                     },
-                    new MxDTO
+                    new MxDTO<double>
                     {
                         ID = "b",
                         RowSize = 3,
                         ColumnSize = 1,
-                        EntriesType = MxDTO.COLUMN_ENTRIES,
+                        EntriesType = MxDTO<double>.COLUMN_ENTRIES,
                         Entries = new double[]
                         {
                             1, -4, 9
                         }
                     },
-                    new MxDTO
+                    new MxDTO<double>
                     {
                         ID = "x",
                         RowSize = 3,
                         ColumnSize = 1,
-                        EntriesType = MxDTO.COLUMN_ENTRIES,
+                        EntriesType = MxDTO<double>.COLUMN_ENTRIES,
                         Entries = new double[]
                         {
                             0.5, 3, -1
@@ -138,37 +138,37 @@ namespace EEMathLib.MatrixMath
             return c;
         }
 
-        protected MxDTO Ex3Data => new MxDTO
+        protected MxDTO<double> Ex3Data => new MxDTO<double>
         {
             Matrices = new[] {
-                    new MxDTO {
+                    new MxDTO<double> {
                         ID = "A",
                         RowSize = 2,
                         ColumnSize = 2,
-                        EntriesType = MxDTO.ROW_ENTRIES,
+                        EntriesType = MxDTO<double>.ROW_ENTRIES,
                         Entries = new double[]
                         {
                              10, 5,
                               2, 9,
                         }
                     },
-                    new MxDTO
+                    new MxDTO<double>
                     {
                         ID = "y",
                         RowSize = 2,
                         ColumnSize = 1,
-                        EntriesType = MxDTO.COLUMN_ENTRIES,
+                        EntriesType = MxDTO<double>.COLUMN_ENTRIES,
                         Entries = new double[]
                         {
                             6, 3
                         }
                     },
-                    new MxDTO
+                    new MxDTO<double>
                     {
                         ID = "x",
                         RowSize = 2,
                         ColumnSize = 1,
-                        EntriesType = MxDTO.COLUMN_ENTRIES,
+                        EntriesType = MxDTO<double>.COLUMN_ENTRIES,
                         Entries = new double[]
                         {
                             0.4875, 0.225
@@ -228,37 +228,37 @@ namespace EEMathLib.MatrixMath
         /// </summary>
         public bool Ex4()
         {
-            var m = new MxDTO
+            var m = new MxDTO<double>
             {
                 Matrices = new[] {
-                    new MxDTO {
+                    new MxDTO<double> {
                         ID = "A",
                         RowSize = 2,
                         ColumnSize = 2,
-                        EntriesType = MxDTO.ROW_ENTRIES,
+                        EntriesType = MxDTO<double>.ROW_ENTRIES,
                         Entries = new double[]
                         {
                              5, 10,
                              9,  2,
                         }
                     },
-                    new MxDTO
+                    new MxDTO<double>
                     {
                         ID = "y",
                         RowSize = 2,
                         ColumnSize = 1,
-                        EntriesType = MxDTO.COLUMN_ENTRIES,
+                        EntriesType = MxDTO<double>.COLUMN_ENTRIES,
                         Entries = new double[]
                         {
                             6, 3
                         }
                     },
-                    new MxDTO
+                    new MxDTO<double>
                     {
                         ID = "x",
                         RowSize = 2,
                         ColumnSize = 1,
-                        EntriesType = MxDTO.COLUMN_ENTRIES,
+                        EntriesType = MxDTO<double>.COLUMN_ENTRIES,
                         Entries = new double[]
                         {
                             0.225, 0.4875

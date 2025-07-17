@@ -12,6 +12,13 @@ namespace TestUnit
         }
 
         [Fact]
+        public void Ex1a()
+        {
+            var c = LFExample.Ex1a();
+            Assert.True(c, "Build Y matrix ex1 failed.");
+        }
+
+        [Fact]
         public void Ex2() 
         {
             var c = LFExample.Ex2();

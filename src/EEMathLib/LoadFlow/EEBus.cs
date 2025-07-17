@@ -26,6 +26,7 @@
         public BusTypeEnum BusType { get; set; }
 
         public double Voltage { get; set; }
+        public double Angle { get; set; }
 
         public double Pload { get; set; }
         public double Qload { get; set; }

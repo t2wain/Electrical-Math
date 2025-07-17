@@ -7,11 +7,11 @@ namespace TestUnit
 {
     public class MxTest
     {
-        public MxDTO MxData =>
-            new MxDTO
+        public MxDTO<double> MxData =>
+            new MxDTO<double>
             {
                 Matrices = [ 
-                    new MxDTO
+                    new MxDTO< double >
                     {
                         ID = "MxTest1",
                         RowSize = 2,
@@ -21,7 +21,7 @@ namespace TestUnit
                             3, 4 
                         ]
                     },
-                    new MxDTO
+                    new MxDTO< double >
                     {
                         ID = "MxTest2",
                         RowSize = 2,
@@ -46,7 +46,7 @@ namespace TestUnit
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                 });
 
-            var o = JsonSerializer.Deserialize<MxDTO>(json, new JsonSerializerOptions
+            var o = JsonSerializer.Deserialize<MxDTO<double>>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
                 Converters = { new JsonStringEnumConverter() }

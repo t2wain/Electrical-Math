@@ -1,11 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using EEMathLib.DTO;
+using EEMathLib.MatrixMath;
+using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
+using LF = EEMathLib.LoadFlow.LFGaussSiedel;
 
 namespace EEMathLib.LoadFlow
 {
     public static class LFExample
     {
-        static IEnumerable<EEBus> Busses => new List<EEBus>
+        #region Data
+
+        static readonly IEnumerable<EEBus> Busses = new List<EEBus>
         {
             new EEBus
             {
@@ -47,7 +53,7 @@ namespace EEMathLib.LoadFlow
             },
         };
 
-        static IEnumerable<EELine> Lines => new List<EELine>
+        static readonly IEnumerable<EELine> Lines = new List<EELine>
         {
             new EELine
             {
@@ -70,7 +76,8 @@ namespace EEMathLib.LoadFlow
                 FromBusID = "4",
                 ToBusID = "5",
                 R = 0.00225,
-                X = 0.44,
+                X = 0.025,
+                B = 0.44,
             },
             new EELine
             {
@@ -88,6 +95,75 @@ namespace EEMathLib.LoadFlow
             },
         };
 
+        static readonly IEnumerable<EEBus> LFResult = new List<EEBus>
+        {
+            new EEBus
+            {
+                BusIndex = 0,
+                ID = "1",
+                BusType = BusTypeEnum.Slack,
+                Voltage = 1.0,
+                Angle = 0.0,
+                Pgen = 3.948,
+                Qgen = 1.144,
+            },
+            new EEBus
+            {
+                BusIndex = 1,
+                ID = "2",
+                BusType = BusTypeEnum.PQ,
+                Voltage = 0.834,
+                Angle = -22.407,
+                Pload = 8.0,
+                Qload = 2.8,
+            },
+            new EEBus
+            {
+                BusIndex = 2,
+                ID = "3",
+                BusType = BusTypeEnum.PV,
+                Voltage = 1.05,
+                Angle = -0.597,
+                Pgen = 5.2,
+                Qgen = 3.376,
+                Pload = 0.8,
+                Qload = 0.4,
+                Qmin = -2.8,
+                Qmax = 4.0,
+            },
+            new EEBus
+            {
+                BusIndex = 3,
+                ID = "4",
+                BusType = BusTypeEnum.PQ,
+                Voltage = 1.019,
+                Angle = -2.834,
+            },
+            new EEBus
+            {
+                BusIndex = 4,
+                ID = "5",
+                BusType = BusTypeEnum.PQ,
+                Voltage = 0.974,
+                Angle = -4.548,
+            },
+        };
+
+        static readonly MxDTO<Complex> YResult = new MxDTO<Complex>
+        {
+            RowSize = 5,
+            ColumnSize = 5,
+            EntriesType = MxDTO<Complex>.ROW_ENTRIES,
+            Entries = new Complex[] 
+            {
+                new Complex(3.73, -49.72), Complex.Zero, Complex.Zero, Complex.Zero, new Complex(-3.73, 49.72),
+                Complex.Zero, new Complex(2.68, -28.46), Complex.Zero, new Complex(-0.89, 9.92), new Complex(-1.79, 19.84),
+                Complex.Zero, Complex.Zero, new Complex(7.46, -99.44), new Complex(-7.46, 99.44), Complex.Zero,
+                Complex.Zero, new Complex(-0.89, 9.92), new Complex(-7.46, 99.44), new Complex(11.92, -147.96), new Complex(-3.57, 39.68),
+                new Complex(-3.73, 49.72), new Complex(-1.79, 19.84), Complex.Zero, new Complex(-3.57, 39.68), new Complex(9.09, -108.58)
+            }
+        };  
+
         static EENetwork CreateNetwork()
         {
             var nw = new EENetwork(Busses, Lines);
@@ -96,6 +172,8 @@ namespace EEMathLib.LoadFlow
             return nw;
         }
 
+        #endregion
+
         /// <summary>
         /// Build Y matrix
         /// </summary>
@@ -103,6 +181,7 @@ namespace EEMathLib.LoadFlow
         {
             var nw = CreateNetwork();
             var Y = nw.YMatrix;
+            var res = MX.ParseMatrix(YResult);
 
             var y25 = new Phasor(19.9195, 95.143);
             var e25 = Phasor.Convert(Y[1, 4]);
@@ -120,14 +199,34 @@ namespace EEMathLib.LoadFlow
         }
 
         /// <summary>
+        /// Build Y matrix
+        /// </summary>
+        public static bool Ex1a()
+        {
+            var nw = CreateNetwork();
+            var Y = nw.YMatrix;
+            var res = MX.ParseMatrix(YResult);
+
+            var d = Y.Transpose().AsColumnMajorArray();
+            var q = d.Zip(YResult.Entries, (y, r) => new { y, r });
+            var c = true;
+            foreach(var i in q)
+            {
+                c = c && Checker.EQ(i.y, i.r, 0.01, 0.01);
+                if (!c) break;
+            }
+            return c;
+        }
+
+        /// <summary>
         /// Calculate bus "2" voltage at iteration 1.
         /// </summary>
         public static bool Ex2()
         {
             var nw = CreateNetwork();
-            var buses = LFGaussSiedel.Initialize(nw.Buses);
-            var bus = buses.FirstOrDefault(b => b.BusData.ID == "2");
-            var v = LFGaussSiedel.CalcVoltage(bus, nw.YMatrix, buses);
+            var buses = LF.Initialize(nw.Buses);
+            var bus = buses.FirstOrDefault(b => b.ID == "2");
+            var v = LF.CalcVoltage(bus, nw.YMatrix, buses);
 
             var v2 = new Phasor(0.8746, -15.675);
             var e2 = (Phasor)v;
@@ -140,9 +239,29 @@ namespace EEMathLib.LoadFlow
         public static bool Ex3()
         {
             var nw = CreateNetwork();
-            var res = LFGaussSiedel.Solve(nw);
+            var res = LF.Solve(nw, 0.02, 200, 50);
 
-            var c = !res.IsError;
+            if (res.Error == ErrorEnum.Divergence)
+                return false;
+
+            var rbuses = LF.CalcResult(res.Data).ToDictionary(bus => bus.ID);
+            var dbuses = LFResult.ToDictionary(bus => bus.ID);
+
+            var c = true;
+            foreach (var dbus in dbuses.Values)
+            {
+                var rb = rbuses[dbus.ID];
+                c = c && Checker.EQ(rb.Voltage, dbus.Voltage, 0.01);
+                c = c && Checker.EQ(rb.Angle, dbus.Angle, 0.01);
+
+                if (rb.BusType == BusTypeEnum.PQ 
+                    || rb.BusType == BusTypeEnum.Slack)
+                {
+                    c = c && Checker.EQ(rb.Pgen, dbus.Pgen, 0.01);
+                    c = c && Checker.EQ(rb.Qgen, dbus.Qgen, 0.01);
+                }
+            }
+
             return c;
         }
     }

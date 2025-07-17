@@ -2,6 +2,7 @@
 using MathNet.Numerics.LinearAlgebra;
 using System;
 using System.Linq;
+using N = System.Numerics;
 
 namespace EEMathLib.MatrixMath
 {
@@ -25,10 +26,15 @@ namespace EEMathLib.MatrixMath
 
         #endregion
 
-        public static Matrix<double> ParseMatrix(MxDTO m) =>
-            m.EntriesType == MxDTO.COLUMN_ENTRIES ?
+        public static Matrix<double> ParseMatrix(MxDTO<double> m) =>
+            m.EntriesType == MxDTO<double>.COLUMN_ENTRIES ?
                 Matrix<double>.Build.Dense(m.RowSize, m.ColumnSize, m.Entries) :
                 Matrix<double>.Build.DenseOfRowMajor(m.RowSize, m.ColumnSize, m.Entries);
+
+        public static Matrix<N.Complex> ParseMatrix(MxDTO<N.Complex> m) =>
+            m.EntriesType == MxDTO<N.Complex>.COLUMN_ENTRIES ?
+                Matrix<N.Complex>.Build.Dense(m.RowSize, m.ColumnSize, m.Entries) :
+                Matrix<N.Complex>.Build.DenseOfRowMajor(m.RowSize, m.ColumnSize, m.Entries);
 
         /// <summary>
         /// Solve Ax = b using Gauss-Seidel iteration method.

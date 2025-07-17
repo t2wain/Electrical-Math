@@ -28,6 +28,7 @@ namespace EEMathLib.LoadFlow
             }
             public EEBus BusData { get; set; }
             public int BusIndex => BusData.BusIndex;
+            public string ID { get; set; }
             public BusTypeEnum BusType { get; set; }
             public Complex BusVoltage { get; set; }
             public Complex Sbus { get; set; }
@@ -38,7 +39,7 @@ namespace EEMathLib.LoadFlow
         #endregion
 
         public static Result<IEnumerable<BusResult>> Solve(EENetwork network, 
-            double threshold = 0.001, int maxIteration = 100)
+            double threshold = 0.001, int maxIteration = 100, int minIteration = 50)
         {
             var buses = Initialize(network.Buses);
             var Y = network.YMatrix;
@@ -54,7 +55,7 @@ namespace EEMathLib.LoadFlow
                     #region Calulate
 
                     // load bus
-                    if (bus.BusType == BusTypeEnum.PQ)
+                    if (bus.BusData.BusType == BusTypeEnum.PQ)
                     {
                         var vnxt = CalcVoltage(bus, Y, buses);
                         UpdateVErr(bus, bus.BusVoltage.Magnitude, vnxt.Magnitude, i);
@@ -64,12 +65,13 @@ namespace EEMathLib.LoadFlow
                     }
 
                     // voltage controlled bus
-                    else if (bus.BusType == BusTypeEnum.PV)
+                    else if (bus.BusData.BusType == BusTypeEnum.PV)
                     {
                         // calculate Qk
                         var sk = CalcPower(bus, Y, buses);
                         var (snxt, bt) = CalcMaxQk(bus, sk);
-                        UpdateQErr(bus, bus.Sbus.Imaginary, snxt.Imaginary, i, bt == BusTypeEnum.PQ);
+                        UpdateQErr(bus, bus.Sbus.Imaginary, snxt.Imaginary, i, bt != bus.BusType);
+                        bus.BusType = bt;
                         // update Sbus
                         bus.Sbus = snxt;
 
@@ -80,7 +82,7 @@ namespace EEMathLib.LoadFlow
                         if (bt == BusTypeEnum.PV)
                         {
                             // maintain bus controlled voltage and update Ak
-                            bus.BusVoltage = Complex.FromPolarCoordinates(bus.BusVoltage.Magnitude, vnxt.Phase);
+                            bus.BusVoltage = Complex.FromPolarCoordinates(bus.BusData.Voltage, vnxt.Phase);
                         }
                         else
                         {
@@ -94,7 +96,7 @@ namespace EEMathLib.LoadFlow
                     }
 
                     // save slack bus for later calculation
-                    else if (bus.BusType == BusTypeEnum.Slack)
+                    else if (bus.BusData.BusType == BusTypeEnum.Slack)
                     {
                         slackBus = bus;
                     }
@@ -103,8 +105,9 @@ namespace EEMathLib.LoadFlow
                 }
 
                 #region Check solution
-
-                if (IsSolutionFound(buses, threshold))
+                if (i < minIteration)
+                    continue;
+                else if (IsSolutionFound(buses, threshold))
                 {
                     isFound = true;
                     break;
@@ -124,7 +127,7 @@ namespace EEMathLib.LoadFlow
             }
 
             // Calculate Pk, Qk for slack bus
-            if (isFound)
+            //if (isFound)
                 slackBus.Sbus = CalcPower(slackBus, Y, buses);
 
             return new Result<IEnumerable<BusResult>>
@@ -142,9 +145,10 @@ namespace EEMathLib.LoadFlow
             buses.Select(b => new BusResult
             {
                 BusData = b,
+                ID = b.ID,
                 BusType = b.BusType,
                 BusVoltage = new Complex(b.Voltage > 0 ? b.Voltage : 1.0, 0),
-                Sbus = new Complex(b.Pgen - b.Pload, b.Qgen - b.Qload)
+                Sbus = new Complex(-b.Pload, -b.Qload)
             })
             .ToList();
 
@@ -198,24 +202,42 @@ namespace EEMathLib.LoadFlow
         /// Calculate Qk for given Sk based on Qgen limits.
         /// </summary>
         /// <returns>Tuples of Sk and the bus type</returns>
-        static (Complex SBus, BusTypeEnum BustType) CalcMaxQk(BusResult bus, Complex sk)
+        public static (Complex SBus, BusTypeEnum BustType) CalcMaxQk(BusResult bus, Complex sk)
         {
             var qk = sk.Imaginary;
 
             // required Qgen to maintain given bus voltage
             var qgen = qk + bus.BusData.Qload;
+            var pk = bus.BusData.Pgen - bus.BusData.Pload;
 
             // calculate Sbus
-            if (qk < bus.BusData.Qmin)
+            if (qgen < bus.BusData.Qmin)
                 // use definded Qgen min and change to PQ bus
-                return (new Complex(sk.Real, bus.BusData.Qmin), BusTypeEnum.PQ);
-            else if (qk > bus.BusData.Qmax)
+                return (new Complex(pk, bus.BusData.Qmin + bus.BusData.Qload), BusTypeEnum.PQ);
+            else if (qgen > bus.BusData.Qmax)
                 // use definded Qgen max and change to PQ bus
-                return (new Complex(sk.Real, bus.BusData.Qmax), BusTypeEnum.PQ);
+                return (new Complex(pk, bus.BusData.Qmax - bus.BusData.Qload), BusTypeEnum.PQ);
             else
                 // required Qgen is within limits to maintain bus voltage
-                return (sk, BusTypeEnum.PV);
+                return (new Complex(pk, sk.Imaginary), BusTypeEnum.PV);
         }
+
+        public static IEnumerable<EEBus> CalcResult(IEnumerable<BusResult> buses) =>
+            buses.Select(b => new EEBus
+            {
+                BusIndex = b.BusIndex,
+                ID = b.ID,
+                BusType = b.BusType,
+                Voltage = b.BusVoltage.Magnitude,
+                Angle = Phasor.ConvertRadianToDegree(b.BusVoltage.Phase),
+                Pgen = b.Sbus.Real + b.BusData.Pload,
+                Qgen = b.Sbus.Imaginary + b.BusData.Qload,
+                Pload = b.BusData.Pload,
+                Qload = b.BusData.Qload,
+                Qmin = b.BusData.Qmin,
+                Qmax = b.BusData.Qmax
+            })
+            .ToList();
 
         #endregion
 
@@ -253,7 +275,7 @@ namespace EEMathLib.LoadFlow
                     && Math.Abs(bus.Err.VErr / bus.BusVoltage.Magnitude) <= threshold;
                 cv = cv && Math.Abs(bus.BusVoltage.Phase) > 0
                     && Math.Abs(bus.Err.AErr / bus.BusVoltage.Phase) <= threshold;
-                if (bus.BusType == BusTypeEnum.PV)
+                if (bus.BusData.BusType == BusTypeEnum.PV)
                 {
                     cv = cv && Math.Abs(bus.Sbus.Imaginary) > 0
                         && Math.Abs(bus.Err.QErr / bus.Sbus.Imaginary) <= threshold;
@@ -272,7 +294,7 @@ namespace EEMathLib.LoadFlow
             {
                 cv = cv && (bus.Err.VErr < 0.1 || bus.Err.VErr <= bus.ErrRef.VErr * 3);
                 cv = cv && (bus.Err.AErr < 0.1 || bus.Err.AErr <= bus.ErrRef.AErr * 3);
-                if (bus.BusType == BusTypeEnum.PV)
+                if (bus.BusData.BusType == BusTypeEnum.PV)
                     cv = cv && (bus.Err.QErr < 0.1 || bus.Err.QErr <= bus.ErrRef.QErr * 3);
             }
             return !cv;
