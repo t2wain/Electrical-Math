@@ -8,41 +8,48 @@ using EEMathLib.DTO;
 
 namespace EEMathLib.LoadFlow
 {
-    public static class LFGaussSiedel
-    {
-        #region DTO
+    #region DTO
 
+    public class BusResult
+    {
         public class ErrVal
         {
             public double VErr { get; set; }
             public double AErr { get; set; }
+            public double PErr { get; set; }
             public double QErr { get; set; }
         }
 
-        public class BusResult
+        public BusResult()
         {
-            public BusResult()
-            {
-                Err = new ErrVal();
-                ErrRef = new ErrVal();
-            }
-            public EEBus BusData { get; set; }
-            public int BusIndex => BusData.BusIndex;
-            public string ID { get; set; }
-            public BusTypeEnum BusType { get; set; }
-            public Complex BusVoltage { get; set; }
-            public Complex Sbus { get; set; }
-            public ErrVal Err { get; set; }
-            public ErrVal ErrRef { get; set; }
+            Err = new ErrVal();
+            ErrRef = new ErrVal();
         }
+        public EEBus BusData { get; set; }
+        public int BusIndex { get; set; }
+        public string ID { get; set; }
+        public BusTypeEnum BusType { get; set; }
+        public Complex BusVoltage { get; set; }
+        public Complex Sbus { get; set; }
+        public ErrVal Err { get; set; }
+        public ErrVal ErrRef { get; set; }
+    }
 
-        #endregion
+    #endregion
 
-        public static Result<IEnumerable<BusResult>> Solve(EENetwork network, 
-            double threshold = 0.001, int maxIteration = 100, int minIteration = 50)
+    public static class LFGaussSiedel
+    {
+
+        public static Result<IEnumerable<BusResult>> Solve(EENetwork network,
+            double threshold = 0.015, int maxIteration = 100, int minIteration = 50) =>
+            Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration, minIteration);
+
+        public static Result<IEnumerable<BusResult>> Solve(IEnumerable<BusResult> buses, Matrix<Complex> YMatrix, 
+            double threshold = 0.015, int maxIteration = 100, int minIteration = 50)
         {
-            var buses = Initialize(network.Buses);
-            var Y = network.YMatrix;
+            var Y = YMatrix;
+
+            #region Iteration
 
             BusResult slackBus = null;
             var i = 0;
@@ -52,7 +59,7 @@ namespace EEMathLib.LoadFlow
                 // calculate Vk, Ak, Qk for each bus
                 foreach (var bus in buses)
                 {
-                    #region Calulate
+                    #region Calulate Bus
 
                     // load bus
                     if (bus.BusData.BusType == BusTypeEnum.PQ)
@@ -69,6 +76,8 @@ namespace EEMathLib.LoadFlow
                     {
                         // calculate Qk
                         var sk = CalcPower(bus, Y, buses);
+                        UpdatePErr(bus, bus.Sbus.Real, sk.Real, i);
+
                         var (snxt, bt) = CalcMaxQk(bus, sk);
                         UpdateQErr(bus, bus.Sbus.Imaginary, snxt.Imaginary, i, bt != bus.BusType);
                         bus.BusType = bt;
@@ -104,7 +113,8 @@ namespace EEMathLib.LoadFlow
                     #endregion
                 }
 
-                #region Check solution
+                #region Check for solution
+
                 if (i < minIteration)
                     continue;
                 else if (IsSolutionFound(buses, threshold))
@@ -126,9 +136,10 @@ namespace EEMathLib.LoadFlow
                 #endregion
             }
 
+            #endregion
+
             // Calculate Pk, Qk for slack bus
-            //if (isFound)
-                slackBus.Sbus = CalcPower(slackBus, Y, buses);
+            slackBus.Sbus = CalcPower(slackBus, Y, buses);
 
             return new Result<IEnumerable<BusResult>>
             {
@@ -145,6 +156,7 @@ namespace EEMathLib.LoadFlow
             buses.Select(b => new BusResult
             {
                 BusData = b,
+                BusIndex = b.BusIndex,
                 ID = b.ID,
                 BusType = b.BusType,
                 BusVoltage = new Complex(b.Voltage > 0 ? b.Voltage : 1.0, 0),
@@ -257,6 +269,13 @@ namespace EEMathLib.LoadFlow
                 bus.ErrRef.AErr = bus.Err.AErr;
         }
 
+        static void UpdatePErr(BusResult bus, double pcur, double pnext, int iteration)
+        {
+            bus.Err.PErr = Math.Abs(pnext - pcur);
+            if (iteration == 1 || iteration % 6 == 0)
+                bus.ErrRef.PErr = bus.Err.PErr;
+        }
+
         static void UpdateQErr(BusResult bus, double qcur, double qnext, int iteration, bool setRef)
         {
             bus.Err.QErr = Math.Abs(qnext - qcur);
@@ -272,13 +291,13 @@ namespace EEMathLib.LoadFlow
             foreach (var bus in buses.Where(b => b.BusType != BusTypeEnum.Slack))
             {
                 cv = cv && Math.Abs(bus.BusVoltage.Magnitude) > 0
-                    && Math.Abs(bus.Err.VErr / bus.BusVoltage.Magnitude) <= threshold;
+                    && Math.Abs(bus.Err.VErr / bus.BusVoltage.Magnitude) < threshold;
                 cv = cv && Math.Abs(bus.BusVoltage.Phase) > 0
-                    && Math.Abs(bus.Err.AErr / bus.BusVoltage.Phase) <= threshold;
+                    && Math.Abs(bus.Err.AErr / bus.BusVoltage.Phase) < (0.1 * threshold);
                 if (bus.BusData.BusType == BusTypeEnum.PV)
                 {
                     cv = cv && Math.Abs(bus.Sbus.Imaginary) > 0
-                        && Math.Abs(bus.Err.QErr / bus.Sbus.Imaginary) <= threshold;
+                        && Math.Abs(bus.Err.QErr / bus.Sbus.Imaginary) < threshold;
                 }
             }
             return cv;
@@ -292,10 +311,10 @@ namespace EEMathLib.LoadFlow
             var cv = true;
             foreach (var bus in buses.Where(b => b.BusType != BusTypeEnum.Slack))
             {
-                cv = cv && (bus.Err.VErr < 0.1 || bus.Err.VErr <= bus.ErrRef.VErr * 3);
-                cv = cv && (bus.Err.AErr < 0.1 || bus.Err.AErr <= bus.ErrRef.AErr * 3);
+                cv = cv && (bus.Err.VErr < 0.1 || bus.ErrRef.VErr < 0.1 || bus.Err.VErr < bus.ErrRef.VErr * 3);
+                cv = cv && (bus.Err.AErr < 0.1 || bus.ErrRef.AErr < 0.1 || bus.Err.AErr < bus.ErrRef.AErr * 3);
                 if (bus.BusData.BusType == BusTypeEnum.PV)
-                    cv = cv && (bus.Err.QErr < 0.1 || bus.Err.QErr <= bus.ErrRef.QErr * 3);
+                    cv = cv && (bus.Err.QErr < 0.1 || bus.ErrRef.QErr < 0.1 || bus.Err.QErr < bus.ErrRef.QErr * 3);
             }
             return !cv;
         }

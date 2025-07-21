@@ -3,7 +3,7 @@ using EEMathLib.MatrixMath;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using LF = EEMathLib.LoadFlow.LFGaussSiedel;
+using GS = EEMathLib.LoadFlow.LFGaussSiedel;
 
 namespace EEMathLib.LoadFlow
 {
@@ -174,6 +174,8 @@ namespace EEMathLib.LoadFlow
 
         #endregion
 
+        #region Gauss-Siedel examples
+
         /// <summary>
         /// Build Y matrix
         /// </summary>
@@ -224,9 +226,9 @@ namespace EEMathLib.LoadFlow
         public static bool Ex2()
         {
             var nw = CreateNetwork();
-            var buses = LF.Initialize(nw.Buses);
+            var buses = GS.Initialize(nw.Buses);
             var bus = buses.FirstOrDefault(b => b.ID == "2");
-            var v = LF.CalcVoltage(bus, nw.YMatrix, buses);
+            var v = GS.CalcVoltage(bus, nw.YMatrix, buses);
 
             var v2 = new Phasor(0.8746, -15.675);
             var e2 = (Phasor)v;
@@ -236,33 +238,39 @@ namespace EEMathLib.LoadFlow
             return c;
         }
 
+        /// <summary>
+        /// Solve load flow using Gauss-Siedel method.
+        /// </summary>
         public static bool Ex3()
         {
             var nw = CreateNetwork();
-            var res = LF.Solve(nw, 0.02, 200, 50);
+            var threshold = 0.0125;
+            var res = GS.Solve(nw, threshold, 100, 20);
 
             if (res.Error == ErrorEnum.Divergence)
                 return false;
 
-            var rbuses = LF.CalcResult(res.Data).ToDictionary(bus => bus.ID);
+            var rbuses = GS.CalcResult(res.Data).ToDictionary(bus => bus.ID);
             var dbuses = LFResult.ToDictionary(bus => bus.ID);
 
             var c = true;
             foreach (var dbus in dbuses.Values)
             {
                 var rb = rbuses[dbus.ID];
-                c = c && Checker.EQ(rb.Voltage, dbus.Voltage, 0.01);
-                c = c && Checker.EQ(rb.Angle, dbus.Angle, 0.01);
+                c = c && Checker.EQPct(rb.Voltage, dbus.Voltage, threshold);
+                c = c && Checker.EQPct(rb.Angle, dbus.Angle, threshold);
 
-                if (rb.BusType == BusTypeEnum.PQ 
+                if (rb.BusType == BusTypeEnum.PQ
                     || rb.BusType == BusTypeEnum.Slack)
                 {
-                    c = c && Checker.EQ(rb.Pgen, dbus.Pgen, 0.01);
-                    c = c && Checker.EQ(rb.Qgen, dbus.Qgen, 0.01);
+                    c = c && Checker.EQPct(rb.Pgen, dbus.Pgen, threshold);
+                    c = c && Checker.EQPct(rb.Qgen, dbus.Qgen, threshold);
                 }
             }
 
             return c;
         }
+
+        #endregion
     }
 }
