@@ -1,9 +1,13 @@
 ﻿using EEMathLib.DTO;
 using EEMathLib.MatrixMath;
+using MathNet.Numerics.LinearAlgebra.Storage;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices.ComTypes;
+using System.Threading;
 using GS = EEMathLib.LoadFlow.LFGaussSiedel;
+using NR = EEMathLib.LoadFlow.LFNewtonRaphson;
 
 namespace EEMathLib.LoadFlow
 {
@@ -174,12 +178,12 @@ namespace EEMathLib.LoadFlow
 
         #endregion
 
-        #region Gauss-Siedel examples
+        #region Y Matrix
 
         /// <summary>
         /// Build Y matrix
         /// </summary>
-        public static bool Ex1()
+        public static bool BuildYMatrix_Partial()
         {
             var nw = CreateNetwork();
             var Y = nw.YMatrix;
@@ -203,7 +207,7 @@ namespace EEMathLib.LoadFlow
         /// <summary>
         /// Build Y matrix
         /// </summary>
-        public static bool Ex1a()
+        public static bool BuildYMatrix()
         {
             var nw = CreateNetwork();
             var Y = nw.YMatrix;
@@ -220,10 +224,14 @@ namespace EEMathLib.LoadFlow
             return c;
         }
 
+        #endregion
+
+        #region Gauss-Siedel examples
+
         /// <summary>
         /// Calculate bus "2" voltage at iteration 1.
         /// </summary>
-        public static bool Ex2()
+        public static bool LoadFlowGS_CalcVoltage()
         {
             var nw = CreateNetwork();
             var buses = GS.Initialize(nw.Buses);
@@ -241,7 +249,7 @@ namespace EEMathLib.LoadFlow
         /// <summary>
         /// Solve load flow using Gauss-Siedel method.
         /// </summary>
-        public static bool Ex3()
+        public static bool LoadFlowGS_Solve()
         {
             var nw = CreateNetwork();
             var threshold = 0.0125;
@@ -251,6 +259,87 @@ namespace EEMathLib.LoadFlow
                 return false;
 
             var rbuses = GS.CalcResult(res.Data).ToDictionary(bus => bus.ID);
+            var dbuses = LFResult.ToDictionary(bus => bus.ID);
+
+            var c = true;
+            foreach (var dbus in dbuses.Values)
+            {
+                var rb = rbuses[dbus.ID];
+                c = c && Checker.EQPct(rb.Voltage, dbus.Voltage, threshold);
+                c = c && Checker.EQPct(rb.Angle, dbus.Angle, threshold);
+
+                if (rb.BusType == BusTypeEnum.PQ
+                    || rb.BusType == BusTypeEnum.Slack)
+                {
+                    c = c && Checker.EQPct(rb.Pgen, dbus.Pgen, threshold);
+                    c = c && Checker.EQPct(rb.Qgen, dbus.Qgen, threshold);
+                }
+            }
+
+            return c;
+        }
+
+        #endregion
+
+        #region Newton-Raphson examples
+
+        public static bool LoadFlowNR_Power_J1()
+        {
+            var nw = CreateNetwork();
+            var buses = NR.Initialize(nw.Buses);
+            var busesPQ = NR.ReIndexBusPQ(buses)
+                .Where(b => b.BusIndex > -1)
+                .ToList();
+
+            var bus2 = busesPQ.FirstOrDefault(b => b.ID == "2");
+
+            var mxPQdelta = NR.CalcDeltaPower(nw.YMatrix, busesPQ);
+            var rowCount = mxPQdelta.RowCount;
+            var c = rowCount == 8;
+
+            var pdk = mxPQdelta[bus2.BusIndex, 0];
+            var res = -7.99972;
+            c = c && Checker.EQ(pdk, res, 0.001);
+
+            var J1 = NR.CreateJ1(nw.YMatrix, busesPQ);
+            var bus4 = busesPQ.FirstOrDefault(b => b.ID == "4");
+            var j24 = J1[bus2.BusIndex, bus4.BusIndex];
+            res = -9.91964;
+            c = c && Checker.EQ(j24, res, 0.001);
+
+            return c;
+        }
+
+        public static bool LoadFlowNR_JMatrix()
+        {
+            var nw = CreateNetwork();
+            var buses = NR.Initialize(nw.Buses);
+            var busesPQ = NR.ReIndexBusPQ(buses)
+                .Where(b => b.BusIndex > -1)
+                .ToList();
+
+            var J1 = NR.CreateJ1(nw.YMatrix, busesPQ);
+            var J2 = NR.CreateJ2(nw.YMatrix, busesPQ);
+            var J3 = NR.CreateJ3(nw.YMatrix, busesPQ);
+            var J4 = NR.CreateJ4(nw.YMatrix, busesPQ);
+
+            var J = NR.CreateJacobianMatrix(nw.YMatrix, busesPQ);
+
+            return true;
+        }
+
+        public static bool LoadFlowNR_Solve()
+        {
+
+            var nw = CreateNetwork();
+            var threshold = 0.001;
+            var res = NR.Solve(nw, threshold, 100, 20);
+
+            if (res.Error == ErrorEnum.Divergence)
+                return false;
+
+
+            var rbuses = NR.CalcResult(res.Data).ToDictionary(bus => bus.ID);
             var dbuses = LFResult.ToDictionary(bus => bus.ID);
 
             var c = true;

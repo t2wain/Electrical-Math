@@ -33,6 +33,11 @@ namespace EEMathLib.LoadFlow
         public Complex Sbus { get; set; }
         public ErrVal Err { get; set; }
         public ErrVal ErrRef { get; set; }
+
+        public int Pidx { get; set; }
+        public int Qidx { get; set; }
+        public int Vidx { get; set; }
+        public int Aidx { get; set; }
     }
 
     #endregion
