@@ -22,9 +22,7 @@ namespace EEMathLib.LoadFlow
             double threshold = 0.015, int maxIteration = 20, int minIteration = 5)
         {
             var Y = YMatrix;
-            var busesPQ = NR.ReIndexBusPQ(buses)
-                .Where(b => b.BusIndex > -1)
-                .ToList();
+            var nrBuses = NR.ReIndexBusPQ(buses);
 
             #region Iteration
 
@@ -34,27 +32,28 @@ namespace EEMathLib.LoadFlow
             {
                 #region Calculate delta PQ and VA
 
-                var N = busesPQ.Count;
-                var mxPQdelta = NR.CalcDeltaPQ(Y, busesPQ); // delta P and Q
-                var J1 = Jacobian.CreateJ1(Y, busesPQ); // P/A derivative Jacobian matrix
-                var J4 = Jacobian.CreateJ4(Y, busesPQ); // Q/V derivative Jacobian matrix
+                var mxPQdelta = NR.CalcDeltaPQ(Y, nrBuses); // delta P and Q
+                var J1 = Jacobian.CreateJ1(Y, nrBuses); // P/A derivative Jacobian matrix
+                var J4 = Jacobian.CreateJ4(Y, nrBuses); // Q/V derivative Jacobian matrix
 
-                var mxAdelta = J1.Solve(mxPQdelta.SubMatrix(0, N, 0, 1)); // delta A
-                var mxVdelta = J4.Solve(mxPQdelta.SubMatrix(N, N, 0, 1)); // delta V
+                var mxAdelta = J1.Solve(mxPQdelta.SubMatrix(0, J1.RowCount - 1, 0, 1)); // delta A
+                var mxVdelta = J4.Solve(mxPQdelta.SubMatrix(J1.RowCount, J4.RowCount - 1, 0, 1)); // delta V
 
                 #endregion
 
                 #region Update bus PQ and VA
 
-                foreach (var b in busesPQ)
+                foreach (var b in nrBuses.Buses)
                 {
                     var ik = b.BusIndex;
 
-                    var dPQ = new Complex(mxPQdelta[ik, 0], mxPQdelta[ik + N, 0]);
+                    var pcnt = nrBuses.J1Size.Row;
+                    var dPQ = new Complex(mxPQdelta[ik, 0], mxPQdelta[ik + pcnt, 0]);
                     var sk = b.Sbus + dPQ;
                     var qgk = sk.Imaginary + b.BusData.Qload;
 
-                    var dAV = Complex.FromPolarCoordinates(mxVdelta[ik, 0], mxAdelta[ik, 0]);
+                    var acnt = J4.RowCount;
+                    var dAV = Complex.FromPolarCoordinates(mxVdelta[ik + pcnt, 0], mxAdelta[ik, 0]);
                     var vk = b.BusVoltage + dAV;
 
                     if (b.BusData.BusType == BusTypeEnum.PQ)
@@ -92,6 +91,7 @@ namespace EEMathLib.LoadFlow
                         //b.Sbus = new Complex(b.BusData.Pgen, sk.Imaginary);
                         //UpdateQErr(b, dPQ.Imaginary, i, false);
                         b.BusVoltage = Complex.FromPolarCoordinates(b.BusData.Voltage, vk.Phase);
+                        b.UpdateVErr(0, i, true);
                         b.UpdateAErr(dAV.Phase, i);
                     }
                 }

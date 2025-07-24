@@ -11,6 +11,18 @@ namespace EEMathLib.LoadFlow
 {
     public static class LFNewtonRaphson
     {
+        public class NRBuses
+        {
+            public BU PQBuses { get; set; }
+            public BU PVBuses { get; set; }
+            public BU Buses { get; set; }
+            public (int Row, int Col) J1Size { get; set; }
+            public (int Row, int Col) J2Size { get; set; }
+            public (int Row, int Col) J3Size { get; set; }
+            public (int Row, int Col) J4Size { get; set; }
+            public (int Row, int Col) JSize { get; set; }
+        }
+
         public static Result<BU> Solve(EENetwork network,
             double threshold = 0.015, int maxIteration = 20, int minIteration = 5) =>
             Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration, minIteration);
@@ -22,9 +34,6 @@ namespace EEMathLib.LoadFlow
             double threshold = 0.015, int maxIteration = 20, int minIteration = 5)
         {
             var Y = YMatrix;
-            var busesPQ = ReIndexBusPQ(buses)
-                .Where(b => b.BusIndex > -1)
-                .ToList();
 
             #region Iteration
 
@@ -32,11 +41,12 @@ namespace EEMathLib.LoadFlow
             var i = 0;
             while (i++ < maxIteration)
             {
+                var nrBuses = ReIndexBusPQ(buses);
+
                 #region Calculate delta PQ and VA
 
-                var N = busesPQ.Count;
-                var mxPQdelta = CalcDeltaPQ(Y, busesPQ); // delta P and Q
-                var J = Jacobian.CreateJMatrix(Y, busesPQ);
+                var mxPQdelta = CalcDeltaPQ(Y, nrBuses); // delta P and Q
+                var J = Jacobian.CreateJMatrix(Y, nrBuses);
 
                 var mxAVdelta = J.Solve(mxPQdelta); // delta A and V
 
@@ -44,21 +54,17 @@ namespace EEMathLib.LoadFlow
 
                 #region Update bus PQ and VA
 
-                foreach (var b in busesPQ)
+                foreach (var b in nrBuses.Buses)
                 {
-                    var ik = b.BusIndex;
+                    var ik = b.Pidx;
+                    var pcnt = nrBuses.J1Size.Row;
 
-                    var dPQ = new Complex(mxPQdelta[ik, 0], mxPQdelta[ik + N, 0]);
-                    var sk = b.Sbus + dPQ;
-
-                    var dAV = Complex.FromPolarCoordinates(mxAVdelta[ik + N, 0], mxAVdelta[ik, 0]);
-                    var vk = b.BusVoltage + dAV;
-
+                    var dA = mxAVdelta[b.Aidx, 0];
                     if (b.BusData.BusType == BusTypeEnum.PQ)
                     {
-                        //b.Sbus = sk;
-                        b.UpdatePErr(dPQ.Real, i);
-                        //UpdateQErr(b, dPQ.Imaginary, i, false);
+                        var dV = mxAVdelta[b.Vidx + pcnt, 0];
+                        var dAV = Complex.FromPolarCoordinates(dV, dA);
+                        var vk = b.BusVoltage + dAV;
                         b.BusVoltage = vk;
                         b.UpdateVErr(dAV.Magnitude, i);
                         b.UpdateAErr(dAV.Phase, i);
@@ -66,23 +72,29 @@ namespace EEMathLib.LoadFlow
 
                     else if (b.BusData.BusType == BusTypeEnum.PV)
                     {
+                        var dP = mxPQdelta[b.Pidx, 0];
+                        var dQ = mxPQdelta[b.Qidx + pcnt, 0];
+                        var dPQ = new Complex(dP, dQ);
+                        var sk = b.Sbus + dPQ;
                         var (snxt, bt) = LFC.CalcMaxQk(b, sk);
+
+                        b.Sbus = snxt;
+                        b.BusType = bt;
                         if (bt == BusTypeEnum.PQ)
                         {
-                            b.BusType = BusTypeEnum.PQ;
-                            b.Sbus = snxt;
-                            //UpdateQErr(b, 0, i, true);
+                            var dV = mxAVdelta[b.Vidx + pcnt, 0];
+                            var dAV = Complex.FromPolarCoordinates(dV, dA);
+                            var vk = b.BusVoltage + dAV;
                             b.BusVoltage = vk;
                             b.UpdateVErr(dAV.Magnitude, i);
                             b.UpdateAErr(dAV.Phase, i);
                         }
                         else
                         {
-                            b.BusType = BusTypeEnum.PV;
-                            b.Sbus = snxt;
-                            //UpdateQErr(b, dPQ.Imaginary, i, false);
-                            b.BusVoltage = Complex.FromPolarCoordinates(b.BusData.Voltage, vk.Phase);
-                            b.UpdateAErr(dAV.Phase, i);
+                            var phase = b.BusVoltage.Phase + dA;
+                            b.BusVoltage = Complex.FromPolarCoordinates(b.BusData.Voltage, phase);
+                            b.UpdateVErr(0, i);
+                            b.UpdateAErr(dA, i);
                         }
                     }
                 }
@@ -137,6 +149,10 @@ namespace EEMathLib.LoadFlow
                 {
                     BusData = b,
                     BusIndex = -1,
+                    Aidx = -1,
+                    Vidx = -1,
+                    Qidx = -1,
+                    Pidx = -1,
                     ID = b.ID,
                     BusType = b.BusType,
                     BusVoltage = new Complex(b.Voltage > 0 ? b.Voltage : 1.0, 0),
@@ -144,32 +160,65 @@ namespace EEMathLib.LoadFlow
                 })
                 .ToList();
 
-        public static BU ReIndexBusPQ(BU buses) 
+        public static NRBuses ReIndexBusPQ(BU buses) 
         {
-            var idx = 0;
-            var lstBuses = buses.OrderBy(bus => bus.BusData.BusIndex);
+            var lstBuses = buses
+                .Where(b => b.BusType != BusTypeEnum.Slack)
+                .OrderBy(b => b.BusType == BusTypeEnum.PV ? 0 : 1)
+                .ToList();
+
+            var aidx = 0;
+            var vidx = 0;
             foreach (var b in lstBuses)
             {
-                b.BusIndex = -1; // reset bus index
-                if (b.BusType != BusTypeEnum.Slack)
-                    b.BusIndex = idx++;
+                b.Aidx = b.Vidx = b.Qidx = b.Pidx = -1;
+                b.Aidx = b.Pidx = aidx++;
+                if (b.BusType == BusTypeEnum.PQ)
+                {
+                    b.Vidx = b.Qidx = vidx++;
+                }
             }
-            return buses;
+
+            var pqBuses = lstBuses
+                .Where(b => b.BusType == BusTypeEnum.PQ)
+                .ToList();
+            var busCnt = lstBuses.Count;
+            var pqCnt = pqBuses.Count;
+
+            var ctx = new NRBuses
+            {
+                PQBuses = pqBuses, // calc V and A, given P and Q
+                PVBuses = lstBuses
+                    .Where(b => b.BusType == BusTypeEnum.PV)
+                    .ToList(), // calc Q and A, given P and V
+                Buses = lstBuses,
+                J1Size = (busCnt, busCnt),
+                J2Size = (busCnt, pqCnt),
+                J3Size = (pqCnt, busCnt),
+                J4Size = (pqCnt, pqCnt),
+                JSize = (busCnt + pqCnt, busCnt + pqCnt)
+            };
+
+            return ctx;
         }
 
-        public static MD CalcDeltaPQ(MC Y, BU buses)
+        public static MD CalcDeltaPQ(MC Y, NRBuses nrBuses)
         {
-            var N = buses.Count();
-            var mx = MD.Build.Dense(2 * N, 1, 0.0);
+            var buses = nrBuses.Buses;
+            var N = nrBuses.J1Size.Row;
+            var mx = MD.Build.Dense(nrBuses.JSize.Row, 1, 0.0);
             foreach (var b in buses)
             {
                 var sk = LFC.CalcPower(b, Y, buses);
 
                 var pdk = b.Sbus.Real - sk.Real;
-                mx[b.BusIndex, 0] = pdk; // delta P
+                mx[b.Pidx, 0] = pdk; // delta P
 
-                var qdk = b.Sbus.Imaginary - sk.Imaginary;
-                mx[b.BusIndex + N, 0] = qdk; // delta Q
+                if (b.BusType == BusTypeEnum.PQ)
+                {
+                    var qdk = b.Sbus.Imaginary - sk.Imaginary;
+                    mx[b.Qidx + N, 0] = qdk; // delta Q
+                }
             }
             return mx;
         }

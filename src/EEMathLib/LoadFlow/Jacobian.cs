@@ -4,40 +4,44 @@ using System.Linq;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
+using NR = EEMathLib.LoadFlow.LFNewtonRaphson;
 
 namespace EEMathLib.LoadFlow
 {
     public static class Jacobian
     {
+        #region Jkk
 
         /// <summary>
         /// P/A derivative Jacobian matrix.
         /// </summary>
         public static double CalcJ1kk(BusResult bk, MC Y, BU buses)
         {
-            var jk = bk.BusIndex;
+            var jk = bk.Pidx;
             var vk = bk.BusVoltage;
             var skk = buses
-                .Where(bn => bn.BusIndex != jk)
+                .Where(bn => bn.Aidx != jk)
                 .Select(bn => {
                     var vn = bn.BusVoltage;
                     var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
                     var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = ykn.Magnitude * vn.Magnitude * Math.Sign(a);
+                    var s = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Sign(a);
                     return s;
                 })
                 .Aggregate((a, b) => a + b);
-            return -vk.Magnitude * skk;
+            return -skk;
         }
 
         /// <summary>
         /// P/V derivative Jacobian matrix.
         /// </summary>
-        public static double CalcJ2kk(BusResult bk, MC Y, BU buses)
+        public static double CalcJ2kk(BusResult bk, MC Y, BU pqBuses)
         {
+            var jk = bk.Pidx;
             var vk = bk.BusVoltage;
             var ykk = Y[bk.BusData.BusIndex, bk.BusData.BusIndex];
-            var skk = buses
+            var skk = pqBuses
+                .Where(bn => bn.Vidx != jk)
                 .Select(bn =>
                 {
                     var vn = bn.BusVoltage;
@@ -47,7 +51,7 @@ namespace EEMathLib.LoadFlow
                     return s;
                 })
                 .Aggregate((a, b) => a + b);
-            var i = vk.Magnitude * ykk.Magnitude * Math.Cos(ykk.Phase);
+            var i = 2 * vk.Magnitude * ykk.Real;
             return i + skk;
         }
 
@@ -56,30 +60,32 @@ namespace EEMathLib.LoadFlow
         /// </summary>
         public static double CalcJ3kk(BusResult bk, MC Y, BU buses)
         {
-            var jk = bk.BusIndex;
+            var jk = bk.Qidx;
             var vk = bk.BusVoltage;
             var skk = buses
-                .Where(bn => bn.BusIndex != jk)
+                .Where(bn => bn.Aidx != jk)
                 .Select(bn =>
                 {
                     var vn = bn.BusVoltage;
                     var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
                     var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = ykn.Magnitude * vn.Magnitude * Math.Cos(a);
+                    var s = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Cos(a);
                     return s;
                 })
                 .Aggregate((a, b) => a + b);
-            return vk.Magnitude * skk;
+            return skk;
         }
 
         /// <summary>
         /// Q/V derivative Jacobian matrix.
         /// </summary>
-        public static double CalcJ4kk(BusResult bk, MC Y, BU buses)
+        public static double CalcJ4kk(BusResult bk, MC Y, BU pqBuses)
         {
+            var jk = bk.Qidx;
             var vk = bk.BusVoltage;
             var ykk = Y[bk.BusData.BusIndex, bk.BusData.BusIndex];
-            var skk = buses
+            var skk = pqBuses
+                .Where(bn => bn.Vidx != jk)
                 .Select(bn =>
                 {
                     var vn = bn.BusVoltage;
@@ -89,29 +95,28 @@ namespace EEMathLib.LoadFlow
                     return s;
                 })
                 .Aggregate((a, b) => a + b);
-            var i = -vk.Magnitude * ykk.Magnitude * Math.Sign(ykk.Phase);
+            var i = -2 * vk.Magnitude * ykk.Imaginary;
             return i + skk;
         }
+
+        #endregion
 
         /// <summary>
         /// P/A derivative Jacobian matrix.
         /// </summary>
-        public static MD CreateJ1(MC Y, BU buses)
+        public static MD CreateJ1(MC Y, NR.NRBuses nrBuses)
         {
-            var lstBus = buses;
-            var N = lstBus.Count();
-            var J = MD.Build.Dense(N, N);
-
-            foreach (var bk in lstBus) // row
+            var J = MD.Build.Dense(nrBuses.J1Size.Row, nrBuses.J1Size.Col);
+            foreach (var bk in nrBuses.Buses) // row
             {
-                var jk = bk.BusIndex;
+                var jk = bk.Pidx;
                 var vk = bk.BusVoltage;
-                foreach (var bn in lstBus) // column
+                foreach (var bn in nrBuses.Buses) // column
                 {
-                    var jn = bn.BusIndex;
+                    var jn = bn.Aidx;
                     if (jk == jn)
                     {
-                        var jkk = CalcJ1kk(bk, Y, lstBus);
+                        var jkk = CalcJ1kk(bk, Y, nrBuses.Buses);
                         J[jk, jk] = jkk;
                     }
                     else
@@ -128,23 +133,20 @@ namespace EEMathLib.LoadFlow
         /// <summary>
         /// P/V derivative Jacobian matrix.
         /// </summary>
-        public static MD CreateJ2(MC Y, BU buses)
+        public static MD CreateJ2(MC Y, NR.NRBuses nrBuses)
         {
-            var lstBus = buses;
-            var N = lstBus.Count();
-            var J = MD.Build.Dense(N, N);
-
-            foreach (var bk in lstBus) // row
+            var J = MD.Build.Dense(nrBuses.J2Size.Row, nrBuses.J2Size.Col);
+            foreach (var bk in nrBuses.Buses) // row
             {
-                var jk = bk.BusIndex;
+                var jk = bk.Pidx;
                 var vk = bk.BusVoltage;
-                foreach (var bn in lstBus) // column
+                foreach (var bn in nrBuses.PQBuses) // column
                 {
                     var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-                    var jn = bn.BusIndex;
+                    var jn = bn.Vidx;
                     if (jk == jn)
                     {
-                        var jkk = CalcJ2kk(bk, Y, lstBus);
+                        var jkk = CalcJ2kk(bk, Y, nrBuses.PQBuses);
                         J[jk, jk] = jkk;
                     }
                     else
@@ -161,23 +163,21 @@ namespace EEMathLib.LoadFlow
         /// <summary>
         /// Q/A derivative Jacobian matrix.
         /// </summary>
-        public static MD CreateJ3(MC Y, BU buses)
+        public static MD CreateJ3(MC Y, NR.NRBuses nrBuses)
         {
-            var lstBus = buses;
-            var N = lstBus.Count();
-            var J = MD.Build.Dense(N, N);
+            var J = MD.Build.Dense(nrBuses.J3Size.Row, nrBuses.J3Size.Col);
 
-            foreach (var bk in lstBus) // row
+            foreach (var bk in nrBuses.PQBuses) // row
             {
-                var jk = bk.BusIndex;
+                var jk = bk.Qidx;
                 var vk = bk.BusVoltage;
-                foreach (var bn in lstBus) // column
+                foreach (var bn in nrBuses.Buses) // column
                 {
-                    var jn = bn.BusIndex;
+                    var jn = bn.Aidx;
                     var vn = bn.BusVoltage;
                     if (jk == jn)
                     {
-                        var jkk = CalcJ3kk(bk, Y, lstBus);
+                        var jkk = CalcJ3kk(bk, Y, nrBuses.Buses);
                         J[jk, jk] = jkk;
                     }
                     else
@@ -194,23 +194,20 @@ namespace EEMathLib.LoadFlow
         /// <summary>
         /// Q/V derivative Jacobian matrix.
         /// </summary>
-        public static MD CreateJ4(MC Y, BU buses)
+        public static MD CreateJ4(MC Y, NR.NRBuses nrBuses)
         {
-            var lstBus = buses; //.Where(b => b.BusIndex > -1).ToList();
-            var N = lstBus.Count();
-            var J = MD.Build.Dense(N, N);
-
-            foreach (var bk in lstBus) // row
+            var J = MD.Build.Dense(nrBuses.J4Size.Row, nrBuses.J4Size.Col);
+            foreach (var bk in nrBuses.PQBuses) // row
             {
-                var jk = bk.BusIndex;
+                var jk = bk.Qidx;
                 var vk = bk.BusVoltage;
-                foreach (var bn in lstBus) // column
+                foreach (var bn in nrBuses.PQBuses) // column
                 {
                     var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-                    var jn = bn.BusIndex;
+                    var jn = bn.Vidx;
                     if (jk == jn)
                     {
-                        var jkk = CalcJ4kk(bk, Y, lstBus);
+                        var jkk = CalcJ4kk(bk, Y, nrBuses.PQBuses);
                         J[jk, jk] = jkk;
                     }
                     else
@@ -224,14 +221,14 @@ namespace EEMathLib.LoadFlow
             return J;
         }
 
-        public static MD CreateJMatrix(MC Y, BU buses)
+        public static MD CreateJMatrix(MC Y, NR.NRBuses nrBuses)
         {
-            var J1 = CreateJ1(Y, buses);
-            var J2 = CreateJ2(Y, buses);
-            var J3 = CreateJ3(Y, buses);
-            var J4 = CreateJ4(Y, buses);
+            var J1 = CreateJ1(Y, nrBuses);
+            var J2 = CreateJ2(Y, nrBuses);
+            var J3 = CreateJ3(Y, nrBuses);
+            var J4 = CreateJ4(Y, nrBuses);
 
-            var J = MD.Build.Dense(2 * J1.RowCount, 2 * J1.ColumnCount);
+            var J = MD.Build.Dense(nrBuses.JSize.Row, nrBuses.JSize.Col);
             J.SetSubMatrix(0, 0, J1);
             J.SetSubMatrix(0, J1.ColumnCount, J2);
             J.SetSubMatrix(J1.RowCount, 0, J3);
@@ -239,7 +236,5 @@ namespace EEMathLib.LoadFlow
 
             return J;
         }
-
-
     }
 }

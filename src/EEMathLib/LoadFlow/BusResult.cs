@@ -27,8 +27,10 @@ namespace EEMathLib.LoadFlow
         public ErrVal Err { get; set; }
         public ErrVal ErrRef { get; set; }
 
-        public void UpdateVErr(double vcur, double vnxt, int iteration) => 
-            UpdateVErr(vnxt - vcur, iteration);
+        #region Track error
+
+        public void UpdateVErr(double vcur, double vnxt, int iteration, bool setRef = false) => 
+            UpdateVErr(vnxt - vcur, iteration, setRef);
 
         public void UpdateAErr(double acur, double anext, int iteration) => 
             UpdateAErr(anext - acur, iteration);
@@ -39,10 +41,10 @@ namespace EEMathLib.LoadFlow
         public void UpdateQErr(double qcur, double qnext, int iteration, bool setRef) => 
             UpdateQErr(qnext - qcur, iteration, setRef);
 
-        public void UpdateVErr(double vdelta, int iteration)
+        public void UpdateVErr(double vdelta, int iteration, bool setRef = false)
         {
             Err.VErr = Math.Abs(vdelta);
-            if (iteration == 1 || iteration % 6 == 0)
+            if (iteration == 1 || iteration % 6 == 0 || setRef)
                 ErrRef.VErr = Err.VErr;
         }
 
@@ -69,5 +71,15 @@ namespace EEMathLib.LoadFlow
                 ErrRef.QErr = Err.QErr;
         }
 
+        #endregion
+
+        #region Newton-Raphson bus indices
+
+        public int Aidx { get; set; }
+        public int Vidx { get; set; }
+        public int Pidx { get; set; }
+        public int Qidx { get; set; }
+
+        #endregion
     }
 }

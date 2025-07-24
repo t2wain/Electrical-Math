@@ -20,17 +20,15 @@ namespace EEMathLib.LoadFlow
         {
             var nw = this._data.CreateNetwork();
             var buses = NR.Initialize(nw.Buses);
-            var busesPQ = NR.ReIndexBusPQ(buses)
-                .Where(b => b.BusIndex > -1)
-                .ToList();
+            var nrBuses = NR.ReIndexBusPQ(buses);
 
-            var bus2 = busesPQ.FirstOrDefault(b => b.ID == "2");
+            var bus2 = nrBuses.Buses.FirstOrDefault(b => b.ID == "2");
 
-            var mxPQdelta = NR.CalcDeltaPQ(nw.YMatrix, busesPQ);
+            var mxPQdelta = NR.CalcDeltaPQ(nw.YMatrix, nrBuses);
             var rowCount = mxPQdelta.RowCount;
-            var c = rowCount == 8;
+            var c = rowCount == nrBuses.JSize.Row;
 
-            var pdk = mxPQdelta[bus2.BusIndex, 0];
+            var pdk = mxPQdelta[bus2.Pidx, 0];
             var res = -7.99972;
             c = c && Checker.EQ(pdk, res, 0.001);
 
@@ -41,16 +39,16 @@ namespace EEMathLib.LoadFlow
         {
             var nw = this._data.CreateNetwork();
             var buses = NR.Initialize(nw.Buses);
-            var busesPQ = NR.ReIndexBusPQ(buses)
-                .Where(b => b.BusIndex > -1)
-                .ToList();
+            var nrBuses = NR.ReIndexBusPQ(buses);
 
-            var J1 = Jacobian.CreateJ1(nw.YMatrix, busesPQ);
-            var bus2 = busesPQ.FirstOrDefault(b => b.ID == "2");
-            var bus4 = busesPQ.FirstOrDefault(b => b.ID == "4");
-            var j24 = J1[bus2.BusIndex, bus4.BusIndex];
+            var J1 = Jacobian.CreateJ1(nw.YMatrix, nrBuses);
+            var bus2 = nrBuses.Buses.FirstOrDefault(b => b.ID == "2");
+            var bus4 = nrBuses.Buses.FirstOrDefault(b => b.ID == "4");
+            var j24 = J1[bus2.Pidx, bus4.Aidx];
             var res = -9.91964;
             var c = Checker.EQ(j24, res, 0.001);
+            c = c && J1.RowCount == nrBuses.J1Size.Row 
+                && J1.ColumnCount == nrBuses.J1Size.Col;
 
             return c;
         }
@@ -59,11 +57,9 @@ namespace EEMathLib.LoadFlow
         {
             var nw = this._data.CreateNetwork();
             var buses = NR.Initialize(nw.Buses);
-            var busesPQ = NR.ReIndexBusPQ(buses)
-                .Where(b => b.BusIndex > -1)
-                .ToList();
+            var nrBuses = NR.ReIndexBusPQ(buses);
 
-            var J1 = Jacobian.CreateJ1(nw.YMatrix, busesPQ);
+            var J1 = Jacobian.CreateJ1(nw.YMatrix, nrBuses);
             var res = MX.ParseMatrix(this._data.J1Result);
             var c1 = J1.ToColumnMajorArray().Zip(res.ToColumnMajorArray(), (j, r) =>
             {
@@ -73,11 +69,11 @@ namespace EEMathLib.LoadFlow
             .Any(v => !v);
 
 
-            var J2 = Jacobian.CreateJ2(nw.YMatrix, busesPQ);
-            var J3 = Jacobian.CreateJ3(nw.YMatrix, busesPQ);
-            var J4 = Jacobian.CreateJ4(nw.YMatrix, busesPQ);
+            var J2 = Jacobian.CreateJ2(nw.YMatrix, nrBuses);
+            var J3 = Jacobian.CreateJ3(nw.YMatrix, nrBuses);
+            var J4 = Jacobian.CreateJ4(nw.YMatrix, nrBuses);
 
-            var J = Jacobian.CreateJMatrix(nw.YMatrix, busesPQ);
+            var J = Jacobian.CreateJMatrix(nw.YMatrix, nrBuses);
 
             var c = Checker.EQ(J1[0, 0], J[0, 0], 0.0001);
             c = c && Checker.EQ(J2[0, 0], J[0, J1.ColumnCount], 0.0001);
