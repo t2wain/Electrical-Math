@@ -1,30 +1,32 @@
 ﻿using EEMathLib.DTO;
 using EEMathLib.MatrixMath;
 using System.Linq;
-using NR = EEMathLib.LoadFlow.LFNewtonRaphson;
+using LFNR = EEMathLib.LoadFlow.NR.LFNewtonRaphson;
 using LFC = EEMathLib.LoadFlow.LFCommon;
-using FD = EEMathLib.LoadFlow.LFFastDecoupled;
+using FD = EEMathLib.LoadFlow.NR.LFFastDecoupled;
+using EEMathLib.LoadFlow.Data;
+using System;
 
-namespace EEMathLib.LoadFlow
+namespace EEMathLib.LoadFlow.NR
 {
-    public class NRExample
+    public class NRExample : IDisposable
     {
-        private readonly ILFData _data;
+        ILFData _data;
 
         public NRExample(ILFData data)
         {
-            this._data = data;
+            _data = data;
         }
 
         public bool Calc_PQDelta()
         {
-            var nw = this._data.CreateNetwork();
-            var buses = NR.Initialize(nw.Buses);
-            var nrBuses = NR.ReIndexBusPQ(buses);
+            var nw = _data.CreateNetwork();
+            var buses = LFNR.Initialize(nw.Buses);
+            var nrBuses = LFNR.ReIndexBusPQ(buses);
 
             var bus2 = nrBuses.Buses.FirstOrDefault(b => b.ID == "2");
 
-            var mxPQdelta = NR.CalcDeltaPQ(nw.YMatrix, nrBuses);
+            var mxPQdelta = LFNR.CalcDeltaPQ(nw.YMatrix, nrBuses);
             var rowCount = mxPQdelta.RowCount;
             var c = rowCount == nrBuses.JSize.Row;
 
@@ -37,9 +39,9 @@ namespace EEMathLib.LoadFlow
 
         public bool Calc_J1()
         {
-            var nw = this._data.CreateNetwork();
-            var buses = NR.Initialize(nw.Buses);
-            var nrBuses = NR.ReIndexBusPQ(buses);
+            var nw = _data.CreateNetwork();
+            var buses = LFNR.Initialize(nw.Buses);
+            var nrBuses = LFNR.ReIndexBusPQ(buses);
 
             var J1 = Jacobian.CreateJ1(nw.YMatrix, nrBuses);
             var bus2 = nrBuses.Buses.FirstOrDefault(b => b.ID == "2");
@@ -55,12 +57,12 @@ namespace EEMathLib.LoadFlow
 
         public bool Calc_JMatrix()
         {
-            var nw = this._data.CreateNetwork();
-            var buses = NR.Initialize(nw.Buses);
-            var nrBuses = NR.ReIndexBusPQ(buses);
+            var nw = _data.CreateNetwork();
+            var buses = LFNR.Initialize(nw.Buses);
+            var nrBuses = LFNR.ReIndexBusPQ(buses);
 
             var J1 = Jacobian.CreateJ1(nw.YMatrix, nrBuses);
-            var res = MX.ParseMatrix(this._data.J1Result);
+            var res = MX.ParseMatrix(_data.J1Result);
             var c1 = J1.ToColumnMajorArray().Zip(res.ToColumnMajorArray(), (j, r) =>
             {
                 var v = Checker.EQ(j, r, 0.0001);
@@ -86,16 +88,16 @@ namespace EEMathLib.LoadFlow
         public bool LFSolve()
         {
 
-            var nw = this._data.CreateNetwork();
+            var nw = _data.CreateNetwork();
             var threshold = 0.001;
-            var res = NR.Solve(nw, threshold, 10, 3);
+            var res = LFNR.Solve(nw, threshold, 10, 3);
 
             if (res.Error == ErrorEnum.Divergence)
                 return false;
 
 
             var rbuses = LFC.CalcResult(res.Data).ToDictionary(bus => bus.ID);
-            var dbuses = this._data.LFResult.ToDictionary(bus => bus.ID);
+            var dbuses = _data.LFResult.ToDictionary(bus => bus.ID);
 
             var c = true;
             foreach (var dbus in dbuses.Values)
@@ -118,7 +120,7 @@ namespace EEMathLib.LoadFlow
         public bool LFSolve_FastDecoupled()
         {
 
-            var nw = this._data.CreateNetwork();
+            var nw = _data.CreateNetwork();
             var threshold = 0.001;
             var res = FD.Solve(nw, threshold, 10, 3);
 
@@ -127,7 +129,7 @@ namespace EEMathLib.LoadFlow
 
 
             var rbuses = LFC.CalcResult(res.Data).ToDictionary(bus => bus.ID);
-            var dbuses = this._data.LFResult.ToDictionary(bus => bus.ID);
+            var dbuses = _data.LFResult.ToDictionary(bus => bus.ID);
 
             var c = true;
             foreach (var dbus in dbuses.Values)
@@ -145,6 +147,11 @@ namespace EEMathLib.LoadFlow
             }
 
             return c;
+        }
+
+        public void Dispose()
+        {
+            _data = null;
         }
     }
 }

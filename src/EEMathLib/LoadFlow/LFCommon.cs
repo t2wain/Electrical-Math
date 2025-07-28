@@ -1,4 +1,5 @@
-﻿using MathNet.Numerics;
+﻿using EEMathLib.LoadFlow.Data;
+using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using System.Collections.Generic;
 using System.Linq;

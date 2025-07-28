@@ -1,19 +1,20 @@
 ﻿using EEMathLib.DTO;
+using EEMathLib.LoadFlow.Data;
 using System.Linq;
 using System.Numerics;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
 using LFC = EEMathLib.LoadFlow.LFCommon;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
-using NR = EEMathLib.LoadFlow.LFNewtonRaphson;
+using LFNR = EEMathLib.LoadFlow.NR.LFNewtonRaphson;
 
-namespace EEMathLib.LoadFlow
+namespace EEMathLib.LoadFlow.NR
 {
     public static class LFFastDecoupled
     {
 
         public static Result<BU> Solve(EENetwork network,
             double threshold = 0.015, int maxIteration = 20, int minIteration = 5) =>
-            Solve(NR.Initialize(network.Buses), network.YMatrix, threshold, maxIteration, minIteration);
+            Solve(LFNR.Initialize(network.Buses), network.YMatrix, threshold, maxIteration, minIteration);
 
         /// <summary>
         /// Test failed.
@@ -22,7 +23,7 @@ namespace EEMathLib.LoadFlow
             double threshold = 0.015, int maxIteration = 20, int minIteration = 5)
         {
             var Y = YMatrix;
-            var nrBuses = NR.ReIndexBusPQ(buses);
+            var nrBuses = LFNR.ReIndexBusPQ(buses);
 
             #region Iteration
 
@@ -32,7 +33,7 @@ namespace EEMathLib.LoadFlow
             {
                 #region Calculate delta PQ and VA
 
-                var mxPQdelta = NR.CalcDeltaPQ(Y, nrBuses); // delta P and Q
+                var mxPQdelta = LFNR.CalcDeltaPQ(Y, nrBuses); // delta P and Q
                 var J1 = Jacobian.CreateJ1(Y, nrBuses); // P/A derivative Jacobian matrix
                 var J4 = Jacobian.CreateJ4(Y, nrBuses); // Q/V derivative Jacobian matrix
 

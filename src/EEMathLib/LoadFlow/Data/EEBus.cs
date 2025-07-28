@@ -1,4 +1,4 @@
-﻿namespace EEMathLib.LoadFlow
+﻿namespace EEMathLib.LoadFlow.Data
 {
     public enum BusTypeEnum
     {

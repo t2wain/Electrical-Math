@@ -4,9 +4,8 @@ using System.Linq;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
-using NR = EEMathLib.LoadFlow.LFNewtonRaphson;
 
-namespace EEMathLib.LoadFlow
+namespace EEMathLib.LoadFlow.NR
 {
     public static class Jacobian
     {
@@ -104,7 +103,7 @@ namespace EEMathLib.LoadFlow
         /// <summary>
         /// P/A derivative Jacobian matrix.
         /// </summary>
-        public static MD CreateJ1(MC Y, NR.NRBuses nrBuses)
+        public static MD CreateJ1(MC Y, NRBuses nrBuses)
         {
             var J = MD.Build.Dense(nrBuses.J1Size.Row, nrBuses.J1Size.Col);
             foreach (var bk in nrBuses.Buses) // row
@@ -133,7 +132,7 @@ namespace EEMathLib.LoadFlow
         /// <summary>
         /// P/V derivative Jacobian matrix.
         /// </summary>
-        public static MD CreateJ2(MC Y, NR.NRBuses nrBuses)
+        public static MD CreateJ2(MC Y, NRBuses nrBuses)
         {
             var J = MD.Build.Dense(nrBuses.J2Size.Row, nrBuses.J2Size.Col);
             foreach (var bk in nrBuses.Buses) // row
@@ -163,7 +162,7 @@ namespace EEMathLib.LoadFlow
         /// <summary>
         /// Q/A derivative Jacobian matrix.
         /// </summary>
-        public static MD CreateJ3(MC Y, NR.NRBuses nrBuses)
+        public static MD CreateJ3(MC Y, NRBuses nrBuses)
         {
             var J = MD.Build.Dense(nrBuses.J3Size.Row, nrBuses.J3Size.Col);
 
@@ -194,7 +193,7 @@ namespace EEMathLib.LoadFlow
         /// <summary>
         /// Q/V derivative Jacobian matrix.
         /// </summary>
-        public static MD CreateJ4(MC Y, NR.NRBuses nrBuses)
+        public static MD CreateJ4(MC Y, NRBuses nrBuses)
         {
             var J = MD.Build.Dense(nrBuses.J4Size.Row, nrBuses.J4Size.Col);
             foreach (var bk in nrBuses.PQBuses) // row
@@ -221,7 +220,7 @@ namespace EEMathLib.LoadFlow
             return J;
         }
 
-        public static MD CreateJMatrix(MC Y, NR.NRBuses nrBuses)
+        public static MD CreateJMatrix(MC Y, NRBuses nrBuses)
         {
             var J1 = CreateJ1(Y, nrBuses);
             var J2 = CreateJ2(Y, nrBuses);

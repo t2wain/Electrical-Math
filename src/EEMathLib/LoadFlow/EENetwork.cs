@@ -1,20 +1,23 @@
-﻿using MathNet.Numerics.LinearAlgebra;
+﻿using EEMathLib.LoadFlow.Data;
+using MathNet.Numerics.LinearAlgebra;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
 namespace EEMathLib.LoadFlow
 {
-    public class EENetwork
+    public class EENetwork : IDisposable
     {
-        public EENetwork(IEnumerable<EEBus> buses, IEnumerable<EELine> lines)
+        ILFData _data;
+
+        public EENetwork(ILFData data)
         {
-            this.Buses = new List<EEBus>(buses);
-            this.Lines = new List<EELine>(lines);
+            this._data = data;
         }
 
-        public IEnumerable<EEBus> Buses { get; protected set; }
-        public IEnumerable<EELine> Lines { get; protected set; }
+        public IEnumerable<EEBus> Buses => _data.Busses;
+        public IEnumerable<EELine> Lines => _data.Lines;
         public Matrix<Complex> YMatrix { get; protected set; }
 
         /// <summary>
@@ -67,5 +70,9 @@ namespace EEMathLib.LoadFlow
             YMatrix = Y;
         }
 
+        public void Dispose()
+        {
+            this._data = null;
+        }
     }
 }

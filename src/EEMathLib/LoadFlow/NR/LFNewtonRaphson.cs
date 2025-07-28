@@ -1,4 +1,5 @@
 ﻿using EEMathLib.DTO;
+using EEMathLib.LoadFlow.Data;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -7,21 +8,10 @@ using LFC = EEMathLib.LoadFlow.LFCommon;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
 
-namespace EEMathLib.LoadFlow
+namespace EEMathLib.LoadFlow.NR
 {
     public static class LFNewtonRaphson
     {
-        public class NRBuses
-        {
-            public BU PQBuses { get; set; }
-            public BU PVBuses { get; set; }
-            public BU Buses { get; set; }
-            public (int Row, int Col) J1Size { get; set; }
-            public (int Row, int Col) J2Size { get; set; }
-            public (int Row, int Col) J3Size { get; set; }
-            public (int Row, int Col) J4Size { get; set; }
-            public (int Row, int Col) JSize { get; set; }
-        }
 
         public static Result<BU> Solve(EENetwork network,
             double threshold = 0.015, int maxIteration = 20, int minIteration = 5) =>

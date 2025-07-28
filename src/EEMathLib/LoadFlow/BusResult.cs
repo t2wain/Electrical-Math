@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EEMathLib.LoadFlow.Data;
+using System;
 using System.Numerics;
 
 namespace EEMathLib.LoadFlow

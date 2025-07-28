@@ -1,18 +1,25 @@
 ﻿using EEMathLib.DTO;
+using EEMathLib.LoadFlow.Data;
 using EEMathLib.MatrixMath;
 using System.Linq;
-using GS = EEMathLib.LoadFlow.LFGaussSiedel;
+using LFGS = EEMathLib.LoadFlow.GaussSiedel.LFGaussSiedel;
 using LFC = EEMathLib.LoadFlow.LFCommon;
+using System;
 
-namespace EEMathLib.LoadFlow
+namespace EEMathLib.LoadFlow.GaussSiedel
 {
-    public class GSExample
+    public class GSExample : IDisposable
     {
-        private readonly ILFData _data;
+        ILFData _data;
 
         public GSExample(ILFData data)
         {
-            this._data = data;
+            _data = data;
+        }
+
+        public void Dispose()
+        {
+            _data = null;
         }
 
         #region Y Matrix
@@ -22,9 +29,9 @@ namespace EEMathLib.LoadFlow
         /// </summary>
         public bool BuildYMatrix_Partial()
         {
-            var nw = this._data.CreateNetwork();
+            var nw = _data.CreateNetwork();
             var Y = nw.YMatrix;
-            var res = MX.ParseMatrix(this._data.YResult);
+            var res = MX.ParseMatrix(_data.YResult);
 
             var y25 = new Phasor(19.9195, 95.143);
             var e25 = Phasor.Convert(Y[1, 4]);
@@ -46,12 +53,12 @@ namespace EEMathLib.LoadFlow
         /// </summary>
         public bool BuildYMatrix()
         {
-            var nw = this._data.CreateNetwork();
+            var nw = _data.CreateNetwork();
             var Y = nw.YMatrix;
-            var res = MX.ParseMatrix(this._data.YResult);
+            var res = MX.ParseMatrix(_data.YResult);
 
             var d = Y.Transpose().AsColumnMajorArray();
-            var q = d.Zip(this._data.YResult.Entries, (y, r) => new { y, r });
+            var q = d.Zip(_data.YResult.Entries, (y, r) => new { y, r });
             var c = true;
             foreach(var i in q)
             {
@@ -70,8 +77,8 @@ namespace EEMathLib.LoadFlow
         /// </summary>
         public bool CalcVoltage()
         {
-            var nw = this._data.CreateNetwork();
-            var buses = GS.Initialize(nw.Buses);
+            var nw = _data.CreateNetwork();
+            var buses = LFGS.Initialize(nw.Buses);
             var bus = buses.FirstOrDefault(b => b.ID == "2");
             var v = LFC.CalcVoltage(bus, nw.YMatrix, buses);
 
@@ -88,15 +95,15 @@ namespace EEMathLib.LoadFlow
         /// </summary>
         public bool Solve()
         {
-            var nw = this._data.CreateNetwork();
+            var nw = _data.CreateNetwork();
             var threshold = 0.0125;
-            var res = GS.Solve(nw, threshold, 100, 20);
+            var res = LFGS.Solve(nw, threshold, 100, 20);
 
             if (res.Error == ErrorEnum.Divergence)
                 return false;
 
             var rbuses = LFC.CalcResult(res.Data).ToDictionary(bus => bus.ID);
-            var dbuses = this._data.LFResult.ToDictionary(bus => bus.ID);
+            var dbuses = _data.LFResult.ToDictionary(bus => bus.ID);
 
             var c = true;
             foreach (var dbus in dbuses.Values)

@@ -1,4 +1,5 @@
 ﻿using EEMathLib.DTO;
+using EEMathLib.LoadFlow.Data;
 using MathNet.Numerics.LinearAlgebra;
 using System;
 using System.Collections.Generic;
@@ -6,7 +7,7 @@ using System.Linq;
 using System.Numerics;
 using LFC = EEMathLib.LoadFlow.LFCommon;
 
-namespace EEMathLib.LoadFlow
+namespace EEMathLib.LoadFlow.GaussSiedel
 {
     public static class LFGaussSiedel
     {
@@ -148,7 +149,7 @@ namespace EEMathLib.LoadFlow
                 cv = cv && Math.Abs(bus.BusVoltage.Magnitude) > 0
                     && Math.Abs(bus.Err.VErr / bus.BusVoltage.Magnitude) < threshold;
                 cv = cv && Math.Abs(bus.BusVoltage.Phase) > 0
-                    && Math.Abs(bus.Err.AErr / bus.BusVoltage.Phase) < (0.1 * threshold);
+                    && Math.Abs(bus.Err.AErr / bus.BusVoltage.Phase) < 0.1 * threshold;
                 if (bus.BusData.BusType == BusTypeEnum.PV)
                 {
                     cv = cv && Math.Abs(bus.Sbus.Imaginary) > 0
