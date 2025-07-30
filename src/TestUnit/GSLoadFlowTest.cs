@@ -1,4 +1,6 @@
-﻿namespace TestUnit
+﻿using EEMathLib.LoadFlow.GaussSiedel;
+
+namespace TestUnit
 {
     public class GSLoadFlowTest : IClassFixture<Context>
     {
@@ -10,34 +12,16 @@
         }
 
         [Fact]
-        public void BuildYMatrix_Partial()
-        {
-            var ex = _ctx.GSLoadFlow;
-            var c = ex.BuildYMatrix_Partial();
-            Assert.True(c, "Build Y matrix ex1 failed.");
-        }
-
-        [Fact]
-        public void BuildYMatrix()
-        {
-            var ex = _ctx.GSLoadFlow;
-            var c = ex.BuildYMatrix();
-            Assert.True(c, "Build Y matrix ex1 failed.");
-        }
-
-        [Fact]
         public void LoadFlowGS_CalcVoltage() 
         {
-            var ex = _ctx.GSLoadFlow;
-            var c = ex.CalcVoltage();
+            var c = GSExample.CalcVoltage(_ctx.LoadFlowData);
             Assert.True(c);
         }
 
         [Fact]
         public void LoadFlowGS_Solve()
         {
-            var ex = _ctx.GSLoadFlow;
-            var c = ex.Solve();
+            var c = GSExample.Solve(_ctx.LoadFlowData);
             Assert.True(c, "Load flow calculation failed");
         }
     }

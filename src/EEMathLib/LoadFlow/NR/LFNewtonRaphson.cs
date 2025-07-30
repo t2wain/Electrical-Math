@@ -155,6 +155,7 @@ namespace EEMathLib.LoadFlow.NR
             var lstBuses = buses
                 .Where(b => b.BusType != BusTypeEnum.Slack)
                 .OrderBy(b => b.BusType == BusTypeEnum.PV ? 0 : 1)
+                .ThenBy(b => b.BusData.BusIndex)
                 .ToList();
 
             var aidx = 0;

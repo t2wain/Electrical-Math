@@ -1,4 +1,6 @@
 ﻿using EEMathLib.DTO;
+using MathNet.Numerics.LinearAlgebra;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -14,6 +16,9 @@ namespace EEMathLib.LoadFlow.Data
         protected IEnumerable<EEBus> _LFResult; 
         protected MxDTO<Complex> _YResult;
         protected MxDTO<double> _J1Result;
+        protected MxDTO<double> _J2Result;
+        protected MxDTO<double> _J3Result;
+        protected MxDTO<double> _J4Result;
 
         public double BasePower => _BasePower;
 
@@ -23,6 +28,11 @@ namespace EEMathLib.LoadFlow.Data
         public IEnumerable<EEBus> LFResult => _LFResult;
         public MxDTO<Complex> YResult => _YResult;
         public MxDTO<double> J1Result => _J1Result;
+        public MxDTO<double> J2Result => _J2Result;
+        public MxDTO<double> J3Result => _J3Result;
+        public MxDTO<double> J4Result => _J4Result;
+        public abstract double GetJ1kk(BusResult b1, Matrix<double> res = null);
+        public abstract double GetJ1kn(BusResult b1, BusResult b2, Matrix<double> res = null);
 
         public EENetwork CreateNetwork()
         {
@@ -35,6 +45,10 @@ namespace EEMathLib.LoadFlow.Data
             return _network;
         }
 
+
+        protected Complex Zero => Complex.Zero;
+        protected Complex C(double g, double b) => new Complex(g, b);
+
         public void Dispose()
         {
             _network?.Dispose();
@@ -44,6 +58,9 @@ namespace EEMathLib.LoadFlow.Data
             _LFResult = null;
             _YResult = null;
             _J1Result = null;
+            _J2Result = null;
+            _J2Result = null;
+            _J4Result = null;
         }
     }
 }

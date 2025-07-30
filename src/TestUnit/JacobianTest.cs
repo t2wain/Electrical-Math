@@ -1,8 +1,10 @@
-﻿namespace TestUnit
+﻿using EEMathLib.LoadFlow.NR;
+
+namespace TestUnit
 {
     public class JacobianTest : IClassFixture<Context>
     {
-        private readonly Context _ctx;
+        private Context _ctx;
 
         public JacobianTest(Context ctx)
         {
@@ -10,18 +12,30 @@
         }
 
         [Fact]
-        public void Calc_J1()
+        public void Calc_J1_Partial()
         {
-            var ex = _ctx.NRLoadFlow;
-            var c = ex.Calc_J1();
+            var c = NRExample.Calc_J1_Partial_LFData(_ctx.LoadFlowData);
             Assert.True(c, "NR JMatrix calculation failed");
         }
 
         [Fact]
         public void Calc_JMatrix()
         {
-            var ex = _ctx.NRLoadFlow;
-            var c = ex.Calc_JMatrix();
+            var c = NRExample.Calc_JMatrix(_ctx.LoadFlowData);
+            Assert.True(c, "NR JMatrix calculation failed");
+        }
+
+        [Fact]
+        public void Calc_Jkk()
+        {
+            var c = NRExample.Calc_Jkk(_ctx.LoadFlowData, true, false, false, false);
+            Assert.True(c, "NR JMatrix calculation failed");
+        }
+
+        [Fact]
+        public void Calc_Jkn()
+        {
+            var c = NRExample.Calc_Jkn(_ctx.LoadFlowData, true, false, false, false);
             Assert.True(c, "NR JMatrix calculation failed");
         }
 

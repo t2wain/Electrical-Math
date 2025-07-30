@@ -1,4 +1,6 @@
 ﻿using EEMathLib.DTO;
+using MathNet.Numerics.LinearAlgebra;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -153,11 +155,11 @@ namespace EEMathLib.LoadFlow.Data
                 EntriesType = MxDTO<Complex>.ROW_ENTRIES,
                 Entries = new Complex[]
                 {
-                    new Complex(3.73, -49.72), Complex.Zero, Complex.Zero, Complex.Zero, new Complex(-3.73, 49.72),
-                    Complex.Zero, new Complex(2.68, -28.46), Complex.Zero, new Complex(-0.89, 9.92), new Complex(-1.79, 19.84),
-                    Complex.Zero, Complex.Zero, new Complex(7.46, -99.44), new Complex(-7.46, 99.44), Complex.Zero,
-                    Complex.Zero, new Complex(-0.89, 9.92), new Complex(-7.46, 99.44), new Complex(11.92, -147.96), new Complex(-3.57, 39.68),
-                    new Complex(-3.73, 49.72), new Complex(-1.79, 19.84), Complex.Zero, new Complex(-3.57, 39.68), new Complex(9.09, -108.58)
+                    C(3.73, -49.72), Zero, Zero, Zero, C(-3.73, 49.72),
+                    Zero, C(2.68, -28.46), Zero, C(-0.89, 9.92), C(-1.79, 19.84),
+                    Zero, Zero, C(7.46, -99.44), C(-7.46, 99.44), Zero,
+                    Zero, C(-0.89, 9.92), C(-7.46, 99.44), C(11.92, -147.96), C(-3.57, 39.68),
+                    C(-3.73, 49.72), C(-1.79, 19.84), Zero, C(-3.57, 39.68), C(9.09, -108.58)
                 }
             };
 
@@ -171,10 +173,83 @@ namespace EEMathLib.LoadFlow.Data
                     29.76,  0, -9.91, -19.84,
                     0, 104.41, -104.41, 0,
                     -9.92, -104.41, 154.01, -39.68,
-                    -19.84, 0, -39.68, 59.52,
+                    -19.84, 0, -39.68, 109.24,
                 }
             };
+        }
 
+        public override double GetJ1kk(BusResult b1, Matrix<double> res = null)
+        {
+            if (b1.ID == "2")
+                return 29.76;
+            else if (b1.ID == "3")
+                return 104.41;
+            else if (b1.ID == "4")
+                return 154.01;
+            else if (b1.ID == "5")
+                return 109.24;
+            else throw new Exception();
+        }
+
+        public override double GetJ1kn(BusResult b1, 
+            BusResult b2, Matrix<double> res = null)
+        {
+            if (b1.ID == "2")
+            {
+                switch (b2.ID) 
+                {
+                    case "3":
+                        return 0;
+                    case "4":
+                        return -9.92;
+                    case "5":
+                        return -19.84;
+                    default:
+                        throw new Exception();
+                }
+            }
+            else if (b1.ID == "3") 
+            {
+                switch (b2.ID)
+                {
+                    case "2":
+                    case "5":
+                        return 0;
+                    case "4":
+                        return -104.41;
+                    default:
+                        throw new Exception();
+                }
+            }
+            else if (b1.ID == "4")
+            {
+                switch (b2.ID)
+                {
+                    case "2":
+                        return -9.92;
+                    case "3":
+                        return -104.41;
+                    case "5":
+                        return -39.68;
+                    default:
+                        throw new Exception();
+                }
+            }
+            else if (b1.ID == "5")
+            {
+                switch (b2.ID)
+                {
+                    case "2":
+                        return -19.84;
+                    case "3":
+                        return 0;
+                    case "4":
+                        return -39.68;
+                    default:
+                        throw new Exception();
+                }
+            }
+            else throw new Exception();
         }
     }
 }

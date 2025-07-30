@@ -1,4 +1,6 @@
-﻿namespace TestUnit
+﻿using EEMathLib.LoadFlow.NR;
+
+namespace TestUnit
 {
     public class NRLoadFlowTest : IClassFixture<Context>
     {
@@ -12,24 +14,21 @@
         [Fact]
         public void Calc_PQDelta()
         {
-            var ex = _ctx.NRLoadFlow;
-            var c = ex.Calc_PQDelta();
+            var c = NRExample.Calc_PQDelta_LFData(_ctx.LoadFlowData);
             Assert.True(c, "NR power calculation failed");
         }
 
         [Fact]
         public void Calc_LoadFlow()
         {
-            var ex = _ctx.NRLoadFlow;
-            var c = ex.LFSolve();
+            var c = NRExample.LFSolve(_ctx.LoadFlowData);
             Assert.True(c, "Load flow calculation failed");
         }
 
         [Fact]
         public void Calc_FastDecoupled_LoadFlow()
         {
-            var ex = _ctx.NRLoadFlow;
-            var c = ex.LFSolve_FastDecoupled();
+            var c = NRExample.LFSolve_FastDecoupled(_ctx.LoadFlowData);
             Assert.True(c, "Load flow calculation failed");
         }
 

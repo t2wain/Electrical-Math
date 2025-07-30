@@ -18,7 +18,7 @@ namespace EEMathLib.LoadFlow
 
         public IEnumerable<EEBus> Buses => _data.Busses;
         public IEnumerable<EELine> Lines => _data.Lines;
-        public Matrix<Complex> YMatrix { get; protected set; }
+        public Matrix<Complex> YMatrix { get; set; }
 
         /// <summary>
         /// Assign consecutive indices to buses, 
@@ -60,12 +60,18 @@ namespace EEMathLib.LoadFlow
             {
                 var i = l.FromBus.BusIndex;
                 var j = l.ToBus.BusIndex;
-                var zl = (1 / l.ZImp) + (l.YImp / 2);
-                var z = 1 / l.ZImp;
-                Y[i, i] += zl;
-                Y[j, j] += zl;
-                Y[i, j] -= z;
-                Y[j, i] -= z;
+                var yl = (1 / l.ZImp) + (l.YImp / 2);
+
+                var yii = Y[i, i];
+                var yjj = Y[j, j];
+                var yij = Y[i, j];
+                var yji = Y[i, j];
+
+                var y = 1 / l.ZImp;
+                Y[i, i] += yl;
+                Y[j, j] += yl;
+                Y[i, j] -= y;
+                Y[j, i] -= y;
             }
             YMatrix = Y;
         }

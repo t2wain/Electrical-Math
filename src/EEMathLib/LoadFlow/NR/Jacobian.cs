@@ -9,84 +9,19 @@ namespace EEMathLib.LoadFlow.NR
 {
     public static class Jacobian
     {
-        #region Jkk
+        #region J1
 
         /// <summary>
         /// P/A derivative Jacobian matrix.
+        /// Diagonal entries
         /// </summary>
         public static double CalcJ1kk(BusResult bk, MC Y, BU buses)
         {
             var jk = bk.Pidx;
             var vk = bk.BusVoltage;
-            var skk = buses
+            var skn = buses
                 .Where(bn => bn.Aidx != jk)
                 .Select(bn => {
-                    var vn = bn.BusVoltage;
-                    var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-                    var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Sign(a);
-                    return s;
-                })
-                .Aggregate((a, b) => a + b);
-            return -skk;
-        }
-
-        /// <summary>
-        /// P/V derivative Jacobian matrix.
-        /// </summary>
-        public static double CalcJ2kk(BusResult bk, MC Y, BU pqBuses)
-        {
-            var jk = bk.Pidx;
-            var vk = bk.BusVoltage;
-            var ykk = Y[bk.BusData.BusIndex, bk.BusData.BusIndex];
-            var skk = pqBuses
-                .Where(bn => bn.Vidx != jk)
-                .Select(bn =>
-                {
-                    var vn = bn.BusVoltage;
-                    var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-                    var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = ykn.Magnitude * vn.Magnitude * Math.Cos(a);
-                    return s;
-                })
-                .Aggregate((a, b) => a + b);
-            var i = 2 * vk.Magnitude * ykk.Real;
-            return i + skk;
-        }
-
-        /// <summary>
-        /// Q/A derivative Jacobian matrix.
-        /// </summary>
-        public static double CalcJ3kk(BusResult bk, MC Y, BU buses)
-        {
-            var jk = bk.Qidx;
-            var vk = bk.BusVoltage;
-            var skk = buses
-                .Where(bn => bn.Aidx != jk)
-                .Select(bn =>
-                {
-                    var vn = bn.BusVoltage;
-                    var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-                    var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Cos(a);
-                    return s;
-                })
-                .Aggregate((a, b) => a + b);
-            return skk;
-        }
-
-        /// <summary>
-        /// Q/V derivative Jacobian matrix.
-        /// </summary>
-        public static double CalcJ4kk(BusResult bk, MC Y, BU pqBuses)
-        {
-            var jk = bk.Qidx;
-            var vk = bk.BusVoltage;
-            var ykk = Y[bk.BusData.BusIndex, bk.BusData.BusIndex];
-            var skk = pqBuses
-                .Where(bn => bn.Vidx != jk)
-                .Select(bn =>
-                {
                     var vn = bn.BusVoltage;
                     var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
                     var a = vk.Phase - ykn.Phase - vn.Phase;
@@ -94,14 +29,27 @@ namespace EEMathLib.LoadFlow.NR
                     return s;
                 })
                 .Aggregate((a, b) => a + b);
-            var i = -2 * vk.Magnitude * ykk.Imaginary;
-            return i + skk;
+            return -vk.Magnitude * skn;
         }
 
-        #endregion
 
         /// <summary>
         /// P/A derivative Jacobian matrix.
+        /// Off-diagonal entries
+        /// </summary>
+        public static double CalcJ1kn(BusResult bk, BusResult bn, MC Y)
+        {
+            var jk = bk.Pidx;
+            var jn = bn.Aidx;
+            var vk = bk.BusVoltage;
+            var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
+            var jkn = (vk * ykn.Conjugate() * bn.BusVoltage.Conjugate()).Imaginary;
+            return jkn;
+        }
+
+        /// <summary>
+        /// P/A derivative Jacobian matrix.
+        /// Off-diagonal entries
         /// </summary>
         public static MD CreateJ1(MC Y, NRBuses nrBuses)
         {
@@ -129,8 +77,53 @@ namespace EEMathLib.LoadFlow.NR
             return J;
         }
 
+        #endregion
+
+        #region J2
+
         /// <summary>
         /// P/V derivative Jacobian matrix.
+        /// Diagonal entries
+        /// </summary>
+        public static double CalcJ2kk(BusResult bk, MC Y, BU pqBuses)
+        {
+            var jk = bk.Pidx;
+            var vk = bk.BusVoltage;
+            var ykk = Y[bk.BusData.BusIndex, bk.BusData.BusIndex];
+            var skk = pqBuses
+                .Where(bn => bn.Vidx != jk)
+                .Select(bn =>
+                {
+                    var vn = bn.BusVoltage;
+                    var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
+                    var a = vk.Phase - ykn.Phase - vn.Phase;
+                    var s = ykn.Magnitude * vn.Magnitude * Math.Cos(a);
+                    return s;
+                })
+                .Aggregate((a, b) => a + b);
+            var i = 2 * vk.Magnitude * ykk.Real;
+            return i + skk;
+        }
+
+        /// <summary>
+        /// P/V derivative Jacobian matrix.
+        /// Off-diagonal entries
+        /// </summary>
+        public static double CalcJ2kn(BusResult bk, BusResult bn, MC Y)
+        {
+            var jk = bk.Pidx;
+            var jn = bn.Vidx;
+            var vk = bk.BusVoltage;
+            var vn = bk.BusVoltage;
+            var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
+            var a = vk.Phase - ykn.Phase - vn.Phase;
+            var jkn = vk.Magnitude * ykn.Magnitude * Math.Cos(a);
+            return jkn;
+        }
+
+        /// <summary>
+        /// P/V derivative Jacobian matrix.
+        /// Off-diagonal entries
         /// </summary>
         public static MD CreateJ2(MC Y, NRBuses nrBuses)
         {
@@ -150,7 +143,8 @@ namespace EEMathLib.LoadFlow.NR
                     }
                     else
                     {
-                        var a = vk.Phase - ykn.Phase - bn.BusVoltage.Phase;
+                        var vn = bk.BusVoltage;
+                        var a = vk.Phase - ykn.Phase - vn.Phase;
                         var jkn = vk.Magnitude * ykn.Magnitude * Math.Cos(a);
                         J[jk, jn] = jkn;
                     }
@@ -159,8 +153,51 @@ namespace EEMathLib.LoadFlow.NR
             return J;
         }
 
+        #endregion
+
+        #region J3
+
         /// <summary>
         /// Q/A derivative Jacobian matrix.
+        /// Diagonal entries.
+        /// </summary>
+        public static double CalcJ3kk(BusResult bk, MC Y, BU buses)
+        {
+            var jk = bk.Qidx;
+            var vk = bk.BusVoltage;
+            var skk = buses
+                .Where(bn => bn.Aidx != jk)
+                .Select(bn =>
+                {
+                    var vn = bn.BusVoltage;
+                    var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
+                    var a = vk.Phase - ykn.Phase - vn.Phase;
+                    var s = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Cos(a);
+                    return s;
+                })
+                .Aggregate((a, b) => a + b);
+            return skk;
+        }
+
+        /// <summary>
+        /// Q/A derivative Jacobian matrix.
+        /// Off-diagonal entries.
+        /// </summary>
+        public static double CalcJ3kn(BusResult bk, BusResult bn, MC Y)
+        {
+            var jk = bk.Qidx;
+            var jn = bn.Aidx;
+            var vk = bk.BusVoltage;
+            var vn = bn.BusVoltage;
+            var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
+            var a = vk.Phase - ykn.Phase - vn.Phase;
+            var jkn = -vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Cos(a);
+            return jkn;
+        }
+
+        /// <summary>
+        /// Q/A derivative Jacobian matrix.
+        /// Off-diagonal entries.
         /// </summary>
         public static MD CreateJ3(MC Y, NRBuses nrBuses)
         {
@@ -182,7 +219,8 @@ namespace EEMathLib.LoadFlow.NR
                     else
                     {
                         var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-                        var jkn = (-vk * ykn.Conjugate() * bn.BusVoltage.Conjugate()).Real;
+                        var a = vk.Phase - ykn.Phase - vn.Phase;
+                        var jkn = -vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Cos(a);
                         J[jk, jn] = jkn;
                     }
                 }
@@ -190,8 +228,53 @@ namespace EEMathLib.LoadFlow.NR
             return J;
         }
 
+        #endregion
+
+        #region J4
+
         /// <summary>
         /// Q/V derivative Jacobian matrix.
+        /// Diagonal entries.
+        /// </summary>
+        public static double CalcJ4kk(BusResult bk, MC Y, BU pqBuses)
+        {
+            var jk = bk.Qidx;
+            var vk = bk.BusVoltage;
+            var ykk = Y[bk.BusData.BusIndex, bk.BusData.BusIndex];
+            var skk = pqBuses
+                .Where(bn => bn.Vidx != jk)
+                .Select(bn =>
+                {
+                    var vn = bn.BusVoltage;
+                    var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
+                    var a = vk.Phase - ykn.Phase - vn.Phase;
+                    var s = ykn.Magnitude * vn.Magnitude * Math.Sign(a);
+                    return s;
+                })
+                .Aggregate((a, b) => a + b);
+            var i = -2 * vk.Magnitude * ykk.Imaginary;
+            return i + skk;
+        }
+
+        /// <summary>
+        /// Q/A derivative Jacobian matrix.
+        /// Off-diagonal entries.
+        /// </summary>
+        public static double CalcJ4kn(BusResult bk, BusResult bn, MC Y)
+        {
+            var jk = bk.Qidx;
+            var jn = bn.Vidx;
+            var vk = bk.BusVoltage;
+            var vn = bn.BusVoltage;
+            var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
+            var a = vk.Phase - ykn.Phase - vn.Phase;
+            var jkn = vk.Magnitude * ykn.Magnitude * Math.Sign(a);
+            return jkn;
+        }
+
+        /// <summary>
+        /// Q/V derivative Jacobian matrix.
+        /// Off-diagonal entries.
         /// </summary>
         public static MD CreateJ4(MC Y, NRBuses nrBuses)
         {
@@ -211,7 +294,8 @@ namespace EEMathLib.LoadFlow.NR
                     }
                     else
                     {
-                        var a = vk.Phase - ykn.Phase - bn.BusVoltage.Phase;
+                        var vn = bn.BusVoltage;
+                        var a = vk.Phase - ykn.Phase - vn.Phase;
                         var jkn = vk.Magnitude * ykn.Magnitude * Math.Sign(a);
                         J[jk, jn] = jkn;
                     }
@@ -219,6 +303,8 @@ namespace EEMathLib.LoadFlow.NR
             }
             return J;
         }
+
+        #endregion
 
         public static MD CreateJMatrix(MC Y, NRBuses nrBuses)
         {

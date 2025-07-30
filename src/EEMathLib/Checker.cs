@@ -1,4 +1,7 @@
-﻿using System;
+﻿using MathNet.Numerics.LinearAlgebra;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 namespace EEMathLib
@@ -15,5 +18,57 @@ namespace EEMathLib
 
         public static bool EQ(Complex x, Complex y, double reerr, double imerr) =>
             EQ(x.Real, y.Real, reerr) && EQ(x.Imaginary, y.Imaginary, imerr);
+
+        public static (bool Valid, List<(int Row, int Col)> MisMatch) EQ(
+            Matrix<double> mx, Matrix<double> res, double err)
+        {
+            var c = true;
+            var lst = new List<(int Row, int Col)>();
+            foreach(var row in Enumerable.Range(0, mx.RowCount))
+                foreach(var col in Enumerable.Range(0,mx.ColumnCount))
+                {
+                    var j = mx[row, col];
+                    var r = res[row, col];
+                    var v = EQ(j, r, err);
+                    if (!v)
+                        lst.Add((row, col));
+                    c = c && v;
+                }
+
+            foreach (var i in lst)
+            {
+                var v = mx[i.Row, i.Col];
+                var r = res[i.Row, i.Col];
+            }
+
+            return (c, lst);
+        }
+
+        public static (bool Valid, List<(int Row, int Col)> MisMatch) EQ(
+            Matrix<Complex> mx, Matrix<Complex> res, double reerr, double imerr)
+        {
+            var c = true;
+            var lst = new List<(int Row, int Col)>();
+            foreach(var row in Enumerable.Range(0, mx.RowCount))
+                foreach(var col in Enumerable.Range(0,mx.ColumnCount))
+                {
+                    var j = mx[row, col];
+                    var r = res[row, col];
+                    var v = EQ(j, r, reerr, imerr);
+                    if (!v)
+                        lst.Add((row, col));
+                    c = c && v;
+                }
+
+
+            foreach (var i in lst)
+            {
+                var v = mx[i.Row, i.Col];
+                var r = res[i.Row, i.Col];
+            }
+
+            return (c, lst);
+        }   
+
     }
 }

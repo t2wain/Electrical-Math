@@ -63,7 +63,9 @@ namespace TestUnit
             var m1 = MX.ParseMatrix(d.Matrices[0]);
 
             Assert.NotNull(m1);
+            Assert.Equal(m1[0, 0], 1);
             Assert.Equal(m1[0, 1], 2);
+            Assert.Equal(m1[1, 0], 3);
             Assert.Equal(m1[1, 1], 4);
         }
 

@@ -1,6 +1,8 @@
 ﻿using EEMathLib.DTO;
 using System.Collections.Generic;
 using System.Numerics;
+using System;
+using MathNet.Numerics.LinearAlgebra;
 
 namespace EEMathLib.LoadFlow.Data
 {
@@ -176,11 +178,11 @@ namespace EEMathLib.LoadFlow.Data
                 EntriesType = MxDTO<Complex>.ROW_ENTRIES,
                 Entries = new Complex[]
                 {
-                    new Complex(3.73, -49.72), Complex.Zero, Complex.Zero, Complex.Zero, new Complex(-3.73, 49.72),
-                    Complex.Zero, new Complex(2.68, -28.46), Complex.Zero, new Complex(-0.89, 9.92), new Complex(-1.79, 19.84),
-                    Complex.Zero, Complex.Zero, new Complex(7.46, -99.44), new Complex(-7.46, 99.44), Complex.Zero,
-                    Complex.Zero, new Complex(-0.89, 9.92), new Complex(-7.46, 99.44), new Complex(11.92, -147.96), new Complex(-3.57, 39.68),
-                    new Complex(-3.73, 49.72), new Complex(-1.79, 19.84), Complex.Zero, new Complex(-3.57, 39.68), new Complex(9.09, -108.58)
+                    C(3.2417, -13.0138), C(-1.4006, 5.6022), Zero, Zero, C(-1.8412, 7.4835),
+                    C(-1.4006, 5.6022), C(3.2417, -13.0138), C(-1.8412,7.4835), Zero, Zero,
+                    Zero, C(-1.8412,7.4835), C(4.2294, -18.9271), C(-1.2584, 7.1309), C(-1.1298,4.4768),
+                    Zero, Zero, C(-1.2584, 7.1309), C(2.1921, -10.7227), C(-0.9337, 3.7348),
+                    C(-1.8412, 7.4835), Zero, C(-1.1298,4.4768), C(-0.9337, 3.7348), C(3.9047, -15.5521)
                 }
             };
 
@@ -191,13 +193,139 @@ namespace EEMathLib.LoadFlow.Data
                 EntriesType = MxDTO<double>.ROW_ENTRIES,
                 Entries = new double[]
                 {
-                    29.76,  0, -9.91, -19.84,
-                    0, 104.41, -104.41, 0,
-                    -9.92, -104.41, 154.01, -39.68,
-                    -19.84, 0, -39.68, 59.52,
+                    13.0858,  -7.4835, 0, 0,
+                    -7.4835, 19.0911, -7.1309, -4.4768,
+                    0, -7.1309, 10.8657, -3.7348,
+                    0, -4.4768, -3.7348, 15.6951,
                 }
             };
-        
+
+            _J2Result = new MxDTO<double>
+            {
+                RowSize = 4,
+                ColumnSize = 2,
+                EntriesType = MxDTO<double>.ROW_ENTRIES,
+                Entries = new double[]
+                {
+                    0, 0,
+                    -1.2584, -1.12982,
+                    2.1921, -0.9337,
+                    -0.9337, 3.9047
+                }
+            };
+
+            _J3Result = new MxDTO<double>
+            {
+                RowSize = 2,
+                ColumnSize = 4,
+                EntriesType = MxDTO<double>.ROW_ENTRIES,
+                Entries = new double[]
+                {
+                    0,  1.2584, -2.1921, 0.9337,
+                    0, 1.1298, 0.9337, -3.9047,
+                }
+            };
+
+            _J4Result = new MxDTO<double>
+            {
+                RowSize = 2,
+                ColumnSize = 2,
+                EntriesType = MxDTO<double>.ROW_ENTRIES,
+                Entries = new double[]
+                {
+                    10.5797, -3.7348,
+                    -3.7348, 15.4091,
+                }
+            };
+
+
+        }
+
+        public override double GetJ1kk(BusResult bus, Matrix<double> res = null)
+        {
+            if (res != null)
+            {
+                var v = res[bus.Pidx, bus.Pidx];
+                return v;
+            }
+
+            if (bus.ID == "2")
+                return 13.0858;
+            else if (bus.ID == "3")
+                return 19.0911;
+            else if (bus.ID == "4")
+                return 10.8657;
+            else if (bus.ID == "5")
+                return 15.6951;
+            else throw new Exception();
+        }
+
+        public override double GetJ1kn(BusResult b1, 
+            BusResult b2, Matrix<double> res = null)
+        {
+            if (res != null)
+            {
+                var v = res[b1.Pidx, b2.Aidx];
+                return v;
+            }
+
+            if (b1.ID == "2")
+            {
+                switch (b2.ID)
+                {
+                    case "3":
+                        return -7.4835;
+                    case "4":
+                        return 0;
+                    case "5":
+                        return 0;
+                    default:
+                        throw new Exception();
+                }
+            }
+            else if (b1.ID == "3")
+            {
+                switch (b2.ID)
+                {
+                    case "2":
+                        return -7.4835;
+                    case "4":
+                        return -7.1309;
+                    case "5":
+                        return -4.4768;
+                    default:
+                        throw new Exception();
+                }
+            }
+            else if (b1.ID == "4")
+            {
+                switch (b2.ID)
+                {
+                    case "2":
+                        return 0;
+                    case "3":
+                        return -7.1309;
+                    case "5":
+                        return -3.7348;
+                    default:
+                        throw new Exception();
+                }
+            }
+            else if (b1.ID == "5")
+            {
+                switch (b2.ID)
+                {
+                    case "2":
+                        return 0;
+                    case "3":
+                        return -4.4768;
+                    case "4":
+                        return -3.7348;
+                    default:
+                        throw new Exception();
+                }
+            }
+            else throw new Exception();
         }
     }
 }
