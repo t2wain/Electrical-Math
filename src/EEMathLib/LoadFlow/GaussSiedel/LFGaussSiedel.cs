@@ -9,12 +9,21 @@ using LFC = EEMathLib.LoadFlow.LFCommon;
 
 namespace EEMathLib.LoadFlow.GaussSiedel
 {
+    /// <summary>
+    /// Gauss-Siedel load flow algorithm
+    /// </summary>
     public static class LFGaussSiedel
     {
+        /// <summary>
+        /// Calculate load flow
+        /// </summary>
         public static Result<IEnumerable<BusResult>> Solve(EENetwork network,
             double threshold = 0.015, int maxIteration = 100, int minIteration = 50) =>
             Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration, minIteration);
 
+        /// <summary>
+        /// Calculate load flow
+        /// </summary>
         public static Result<IEnumerable<BusResult>> Solve(IEnumerable<BusResult> buses, Matrix<Complex> YMatrix, 
             double threshold = 0.015, int maxIteration = 100, int minIteration = 50)
         {

@@ -1,4 +1,4 @@
-﻿using EEMathLib.LoadFlow.NR;
+﻿using EEMathLib.LoadFlow.NewtonRaphson;
 
 namespace TestUnit
 {

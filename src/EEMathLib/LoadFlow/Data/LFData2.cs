@@ -6,6 +6,9 @@ using MathNet.Numerics.LinearAlgebra;
 
 namespace EEMathLib.LoadFlow.Data
 {
+    /// <summary>
+    /// Load flow dataset #2 for testing
+    /// </summary>
     public class LFData2 : LFDataAbstract
     {
         public LFData2()

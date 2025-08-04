@@ -3,21 +3,22 @@ using EEMathLib.LoadFlow.Data;
 using EEMathLib.MatrixMath;
 using System.Collections.Generic;
 using System.Linq;
-using FD = EEMathLib.LoadFlow.NR.LFFastDecoupled;
+using FD = EEMathLib.LoadFlow.NewtonRaphson.LFFastDecoupled;
 using LFC = EEMathLib.LoadFlow.LFCommon;
-using LFNR = EEMathLib.LoadFlow.NR.LFNewtonRaphson;
+using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
+using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 
-namespace EEMathLib.LoadFlow.NR
+namespace EEMathLib.LoadFlow.NewtonRaphson
 {
     public class NRExample
     {
         #region Based on LFData dataset
 
-        public static bool Calc_PQDelta_LFData(LFData data)
+        public static bool Calc_PQDelta(LFData data)
         {
             var nw = data.CreateNetwork();
             var buses = LFNR.Initialize(nw.Buses);
-            var nrBuses = LFNR.ReIndexBusPQ(buses);
+            var nrBuses = JC.ReIndexBusPQ(buses);
 
             var bus2 = nrBuses.Buses.FirstOrDefault(b => b.ID == "2");
 
@@ -32,11 +33,11 @@ namespace EEMathLib.LoadFlow.NR
             return c;
         }
 
-        public static bool Calc_J1_Partial_LFData(LFData data)
+        public static bool Calc_J1_Partial(LFData data)
         {
             var nw = data.CreateNetwork();
             var buses = LFNR.Initialize(nw.Buses);
-            var nrBuses = LFNR.ReIndexBusPQ(buses);
+            var nrBuses = JC.ReIndexBusPQ(buses);
 
             var J1 = Jacobian.CreateJ1(nw.YMatrix, nrBuses);
             var res = MX.ParseMatrix(data.J1Result);
@@ -54,6 +55,11 @@ namespace EEMathLib.LoadFlow.NR
 
         #endregion
 
+        #region JMatrix
+
+        /// <summary>
+        /// Test the calculation of JMatrix
+        /// </summary>
         public static bool Calc_JMatrix(ILFData data, 
             bool j1, bool j2, bool j3, bool j4)
         {
@@ -61,7 +67,7 @@ namespace EEMathLib.LoadFlow.NR
             // using YMatrix data instead of calculated value
             nw.YMatrix = MX.ParseMatrix(data.YResult); 
             var buses = LFNR.Initialize(nw.Buses);
-            var nrBuses = LFNR.ReIndexBusPQ(buses);
+            var nrBuses = JC.ReIndexBusPQ(buses);
 
             var c = true;
             if (j1)
@@ -96,9 +102,19 @@ namespace EEMathLib.LoadFlow.NR
             return c;
         }
 
+        /// <summary>
+        /// Test the calculation of JMatrix
+        /// </summary>
         public static bool Calc_JMatrix(ILFData data) => 
             Calc_JMatrix(data, true, true, true, true);
 
+        #endregion
+
+        #region JMatrix Entries
+
+        /// <summary>
+        /// Test the calculation diagonal entries of JMatrix.
+        /// </summary>
         public static bool Calc_Jkk(ILFData data,
             bool j1, bool j2, bool j3, bool j4)
         {
@@ -106,10 +122,13 @@ namespace EEMathLib.LoadFlow.NR
             // using YMatrix data instead of calculated value
             nw.YMatrix = MX.ParseMatrix(data.YResult);
             var buses = LFNR.Initialize(nw.Buses);
-            var nrBuses = LFNR.ReIndexBusPQ(buses);
-            var lst = new List<(string JID, string BusID, double value)>();
+            var nrBuses = JC.ReIndexBusPQ(buses);
+            var lstErr = new List<(string JID, string BusID, double value)>();
 
             var c = true;
+
+            #region J1
+
             if (j1)
             {
                 var res = MX.ParseMatrix(data.J1Result);
@@ -123,10 +142,15 @@ namespace EEMathLib.LoadFlow.NR
                         var r1kk = data.GetJ1kk(bk, res);
                         var v = Checker.EQ(j1kk, r1kk, 0.5);
                         if (!v)
-                            lst.Add(("J1", bk.ID, j1kk));
+                            lstErr.Add(("J1", bk.ID, j1kk));
                         c = c && v;
                     }
             }
+
+            #endregion
+
+            #region J2
+
             if (j2)
             {
                 var res = MX.ParseMatrix(data.J2Result);
@@ -140,10 +164,15 @@ namespace EEMathLib.LoadFlow.NR
                         var r2kk = res[bk.Pidx, bn.Vidx];
                         var v = Checker.EQ(j2kk, r2kk, 0.5);
                         if (!v)
-                            lst.Add(("J2", bk.ID, j2kk));
+                            lstErr.Add(("J2", bk.ID, j2kk));
                         c = c && v;
                     }
             }
+
+            #endregion
+
+            #region J3
+
             if (j3)
             {
                 var res = MX.ParseMatrix(data.J3Result);
@@ -157,10 +186,15 @@ namespace EEMathLib.LoadFlow.NR
                         var r3kk = res[bk.Qidx, bn.Aidx];
                         var v = Checker.EQ(j3kk, r3kk, 0.5);
                         if (!v)
-                            lst.Add(("J3", bk.ID, j3kk));
+                            lstErr.Add(("J3", bk.ID, j3kk));
                         c = c && v;
                     }
             }
+
+            #endregion
+
+            #region J4
+
             if (j4)
             {
                 var res = MX.ParseMatrix(data.J4Result);
@@ -174,14 +208,19 @@ namespace EEMathLib.LoadFlow.NR
                         var r4kk = res[bk.Qidx, bn.Vidx];
                         var v = Checker.EQ(j4kk, r4kk, 0.5);
                         if (!v)
-                            lst.Add(("J4", bk.ID, j4kk));
+                            lstErr.Add(("J4", bk.ID, j4kk));
                         c = c && v;
                     }
             }
 
+            #endregion
+
             return c;
         }
 
+        /// <summary>
+        /// Test the calculation the off-diagonal entries of JMatrix.
+        /// </summary>
         public static bool Calc_Jkn(ILFData data,
             bool j1, bool j2, bool j3, bool j4)
         {
@@ -189,8 +228,8 @@ namespace EEMathLib.LoadFlow.NR
             // using YMatrix data instead of calculated value
             nw.YMatrix = MX.ParseMatrix(data.YResult);
             var buses = LFNR.Initialize(nw.Buses);
-            var nrBuses = LFNR.ReIndexBusPQ(buses);
-            var lst = new List<(string JID, string RowID, string ColID)>();
+            var nrBuses = JC.ReIndexBusPQ(buses);
+            var lstErr = new List<(string JID, string RowID, string ColID)>();
 
             var c = true;
 
@@ -207,7 +246,7 @@ namespace EEMathLib.LoadFlow.NR
                         var r1kk = data.GetJ1kn(bk, bn, res);
                         var v = Checker.EQ(j1kk, r1kk, 0.01);
                         if (!v)
-                            lst.Add(("J1", bk.ID, bn.ID));
+                            lstErr.Add(("J1", bk.ID, bn.ID));
                         c = c && v;
                     }
             }
@@ -227,7 +266,7 @@ namespace EEMathLib.LoadFlow.NR
                         var r1kk = data.GetJ1kn(bk, bn, res);
                         var v = Checker.EQ(j1kk, r1kk, 0.01);
                         if (!v)
-                            lst.Add(("J2", bk.ID, bn.ID));
+                            lstErr.Add(("J2", bk.ID, bn.ID));
                         c = c && v;
                     }
             }
@@ -247,7 +286,7 @@ namespace EEMathLib.LoadFlow.NR
                         var r1kk = data.GetJ1kn(bk, bn, res);
                         var v = Checker.EQ(j1kk, r1kk, 0.01);
                         if (!v)
-                            lst.Add(("J3", bk.ID, bn.ID));
+                            lstErr.Add(("J3", bk.ID, bn.ID));
                         c = c && v;
                     }
             }
@@ -267,7 +306,7 @@ namespace EEMathLib.LoadFlow.NR
                         var r1kk = data.GetJ1kn(bk, bn, res);
                         var v = Checker.EQ(j1kk, r1kk, 0.01);
                         if (!v)
-                            lst.Add(("J4", bk.ID, bn.ID));
+                            lstErr.Add(("J4", bk.ID, bn.ID));
                         c = c && v;
                     }
             }
@@ -276,6 +315,8 @@ namespace EEMathLib.LoadFlow.NR
 
             return c;
         }
+
+        #endregion
 
         #region Solve
 

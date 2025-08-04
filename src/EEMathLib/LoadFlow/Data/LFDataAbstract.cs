@@ -6,6 +6,9 @@ using System.Numerics;
 
 namespace EEMathLib.LoadFlow.Data
 {
+    /// <summary>
+    /// Load flow dataset base implementation
+    /// </summary>
     public abstract class LFDataAbstract : ILFData
     {
         EENetwork _network = null;
@@ -34,7 +37,7 @@ namespace EEMathLib.LoadFlow.Data
         public abstract double GetJ1kk(BusResult b1, Matrix<double> res = null);
         public abstract double GetJ1kn(BusResult b1, BusResult b2, Matrix<double> res = null);
 
-        public EENetwork CreateNetwork()
+        public virtual EENetwork CreateNetwork()
         {
             if (_network == null)
             {

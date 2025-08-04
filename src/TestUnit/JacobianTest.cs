@@ -1,4 +1,4 @@
-﻿using EEMathLib.LoadFlow.NR;
+﻿using EEMathLib.LoadFlow.NewtonRaphson;
 
 namespace TestUnit
 {
@@ -14,7 +14,7 @@ namespace TestUnit
         [Fact]
         public void Calc_J1_Partial()
         {
-            var c = NRExample.Calc_J1_Partial_LFData(_ctx.LoadFlowData);
+            var c = NRExample.Calc_J1_Partial(_ctx.LoadFlowData);
             Assert.True(c, "NR JMatrix calculation failed");
         }
 

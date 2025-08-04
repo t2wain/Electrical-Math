@@ -1,14 +1,81 @@
-﻿using MathNet.Numerics;
+﻿using EEMathLib.LoadFlow.Data;
+using MathNet.Numerics;
 using System;
 using System.Linq;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
 
-namespace EEMathLib.LoadFlow.NR
+namespace EEMathLib.LoadFlow.NewtonRaphson
 {
+    /// <summary>
+    /// Algorithm to calculate Jacobian matrix for Newton-Raphson load flow
+    /// </summary>
     public static class Jacobian
     {
+        #region NRBuses
+
+        public class NRBuses
+        {
+            public BU PQBuses { get; set; }
+            public BU PVBuses { get; set; }
+            public BU Buses { get; set; }
+            public (int Row, int Col) J1Size { get; set; }
+            public (int Row, int Col) J2Size { get; set; }
+            public (int Row, int Col) J3Size { get; set; }
+            public (int Row, int Col) J4Size { get; set; }
+            public (int Row, int Col) JSize { get; set; }
+        }
+
+        /// <summary>
+        /// Assign each bus with an entry index for the 
+        /// Jacobian matrix J1, J2, J3, and J4
+        /// </summary>
+        public static NRBuses ReIndexBusPQ(BU buses)
+        {
+            var lstBuses = buses
+                .Where(b => b.BusType != BusTypeEnum.Slack)
+                .OrderBy(b => b.BusType == BusTypeEnum.PV ? 0 : 1)
+                .ThenBy(b => b.BusData.BusIndex)
+                .ToList();
+
+            var aidx = 0;
+            var vidx = 0;
+            foreach (var b in lstBuses)
+            {
+                b.Aidx = b.Vidx = b.Qidx = b.Pidx = -1;
+                b.Aidx = b.Pidx = aidx++;
+                if (b.BusType == BusTypeEnum.PQ)
+                {
+                    b.Vidx = b.Qidx = vidx++;
+                }
+            }
+
+            var pqBuses = lstBuses
+                .Where(b => b.BusType == BusTypeEnum.PQ)
+                .ToList();
+            var busCnt = lstBuses.Count;
+            var pqCnt = pqBuses.Count;
+
+            var ctx = new NRBuses
+            {
+                PQBuses = pqBuses, // calc V and A, given P and Q
+                PVBuses = lstBuses
+                    .Where(b => b.BusType == BusTypeEnum.PV)
+                    .ToList(), // calc Q and A, given P and V
+                Buses = lstBuses,
+                J1Size = (busCnt, busCnt),
+                J2Size = (busCnt, pqCnt),
+                J3Size = (pqCnt, busCnt),
+                J4Size = (pqCnt, pqCnt),
+                JSize = (busCnt + pqCnt, busCnt + pqCnt)
+            };
+
+            return ctx;
+        }
+
+        #endregion
+
         #region J1
 
         /// <summary>

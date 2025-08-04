@@ -38,12 +38,32 @@ namespace EEMathLib
 
     public interface IYImp : IPhasor 
     { 
+        /// <summary>
+        /// Conductance
+        /// </summary>
+        double G {  get; }
+
+        /// <summary>
+        /// Susceptance
+        /// </summary>
+        double B { get; }
         IZImp ToZImp();
     }
+
     public interface IZImp : IPhasor 
     {
+        /// <summary>
+        /// Resistance
+        /// </summary>
+        double R { get; }
+
+        /// <summary>
+        /// Reactance
+        /// </summary>
+        double X { get; }
         IYImp ToYImp();
     }
+
     public interface IPower : IPhasor 
     {
         double PowerFactor { get; }
@@ -67,6 +87,8 @@ namespace EEMathLib
     {
         #region Constructor
 
+        readonly Complex _c;
+
         /// <summary>
         /// Create a new phasor with 0 degree
         /// </summary>
@@ -82,6 +104,7 @@ namespace EEMathLib
         {
             Magnitude = magnitude;
             Phase = ConvertDegreeToStandard(phase);
+            _c = Complex.FromPolarCoordinates(Magnitude, ConvertDegreeToRadian(Phase));
         }
 
         #endregion
@@ -103,8 +126,7 @@ namespace EEMathLib
         /// <summary>
         /// Convert phasor to rectangular form
         /// </summary>
-        public Complex ToComplex() =>
-            Complex.FromPolarCoordinates(Magnitude, ConvertDegreeToRadian(Phase));
+        public Complex ToComplex() => _c;
 
         public Phasor Conjugate() => new Phasor(Magnitude, -Phase);
 
@@ -139,8 +161,16 @@ namespace EEMathLib
 
         #region Impedance
 
+        double IZImp.R => _c.Real;
+        double IZImp.X => _c.Imaginary;
         IYImp IZImp.ToYImp() => 1 / this;
 
+        #endregion
+
+        #region Admittance
+
+        double IYImp.G => _c.Real;
+        double IYImp.B => _c.Imaginary;
         IZImp IYImp.ToZImp() => 1 / this;
 
         #endregion

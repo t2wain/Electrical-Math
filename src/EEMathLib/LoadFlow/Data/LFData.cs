@@ -6,6 +6,9 @@ using System.Numerics;
 
 namespace EEMathLib.LoadFlow.Data
 {
+    /// <summary>
+    /// Load flow dataset #1 for testing
+    /// </summary>
     public class LFData : LFDataAbstract
     {
         public LFData()

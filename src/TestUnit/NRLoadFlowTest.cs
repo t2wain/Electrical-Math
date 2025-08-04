@@ -1,4 +1,4 @@
-﻿using EEMathLib.LoadFlow.NR;
+﻿using EEMathLib.LoadFlow.NewtonRaphson;
 
 namespace TestUnit
 {
@@ -14,7 +14,7 @@ namespace TestUnit
         [Fact]
         public void Calc_PQDelta()
         {
-            var c = NRExample.Calc_PQDelta_LFData(_ctx.LoadFlowData);
+            var c = NRExample.Calc_PQDelta(_ctx.LoadFlowData);
             Assert.True(c, "NR power calculation failed");
         }
 

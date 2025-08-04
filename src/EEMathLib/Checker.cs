@@ -6,10 +6,14 @@ using System.Numerics;
 
 namespace EEMathLib
 {
+    /// <summary>
+    /// Convenience methods for checking results in unit testing
+    /// </summary>
     public static class Checker
     {
         public static bool EQ(double x, double y, double err) =>
             Math.Abs(x - y) <= err;
+        
         public static bool EQPct(double x, double y, double err) =>
             Math.Abs((x - y) / (y == 0 ? 1 : y)) <= err;
 
