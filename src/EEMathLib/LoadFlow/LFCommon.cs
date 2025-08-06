@@ -1,6 +1,7 @@
 ﻿using EEMathLib.LoadFlow.Data;
 using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -43,29 +44,18 @@ namespace EEMathLib.LoadFlow
         public static Complex CalcPower(BusResult bus, Matrix<Complex> Y, IEnumerable<BusResult> buses)
         {
             var vk = bus.BusVoltage; // given bus voltage
+            var vkIdx = bus.BusData.BusIndex;
             var sv = buses
-                .Select(b =>
+                .Select(bn =>
                 {
-                    var idx = b.BusData.BusIndex;
-                    var yb = Y[bus.BusData.BusIndex, idx];
-                    return yb * b.BusVoltage;
+                    var bnIdx = bn.BusData.BusIndex;
+                    var vn = bn.BusVoltage;
+                    var yn = Y[vkIdx, bnIdx];
+                    return yn * vn;
                 })
                 .Aggregate((v1, v2) => v1 + v2);
             var sk = vk * sv.Conjugate();
             return sk;
-        }
-
-        public static Matrix<Complex> CalcDeltaPower(Matrix<Complex> Y, IEnumerable<BusResult> buses)
-        {
-            var N = buses.Count();
-            var mx = Matrix<Complex>.Build.Dense(N, 1, 0.0);
-            foreach (var b in buses)
-            {
-                var sk = CalcPower(b, Y, buses);
-                var sd = b.Sbus - sk; // delta power
-                mx[b.BusIndex, 0] = sd;
-            }
-            return mx;
         }
 
         /// <summary>

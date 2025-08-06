@@ -15,15 +15,59 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     {
         #region NRBuses
 
+        /// <summary>
+        /// The type of each bus (PQ or PV) for
+        /// each iteration of NewtonRaphson
+        /// </summary>
         public class NRBuses
         {
+            /// <summary>
+            /// All buses in the network including slack bus
+            /// </summary>
+            public BU AllBuses { get; set; }
+
+            public BusResult SlackBus { get; set; }
+
+            /// <summary>
+            /// Include al PQ buses. 
+            /// Calculate V and A, given P and Q
+            /// </summary>
             public BU PQBuses { get; set; }
+
+            /// <summary>
+            /// Include all PV buses.
+            /// Calculate Q and A, given P and V
+            /// </summary>
             public BU PVBuses { get; set; }
+
+            /// <summary>
+            /// Include all buses except for slack bus.
+            /// </summary>
             public BU Buses { get; set; }
+
+            /// <summary>
+            /// Matrix dimension of J1
+            /// </summary>
             public (int Row, int Col) J1Size { get; set; }
+
+            /// <summary>
+            /// Matrix dimension of J2
+            /// </summary>
             public (int Row, int Col) J2Size { get; set; }
+
+            /// <summary>
+            /// Matrix dimension of J3
+            /// </summary>
             public (int Row, int Col) J3Size { get; set; }
+
+            /// <summary>
+            /// Matrix dimension of J4
+            /// </summary>
             public (int Row, int Col) J4Size { get; set; }
+
+            /// <summary>
+            /// Matrix dimension of Jacobian matrix
+            /// </summary>
             public (int Row, int Col) JSize { get; set; }
         }
 
@@ -34,20 +78,21 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         public static NRBuses ReIndexBusPQ(BU buses)
         {
             var lstBuses = buses
-                .Where(b => b.BusType != BusTypeEnum.Slack)
-                .OrderBy(b => b.BusType == BusTypeEnum.PV ? 0 : 1)
-                .ThenBy(b => b.BusData.BusIndex)
+                .Where(b => b.BusType != BusTypeEnum.Slack) // exclude slack bus
+                .OrderBy(b => b.BusType == BusTypeEnum.PV ? 0 : 1) // first sorted by PV then PQ
+                .ThenBy(b => b.BusData.BusIndex) // then sorted by the original indices
                 .ToList();
 
             var aidx = 0;
             var vidx = 0;
             foreach (var b in lstBuses)
             {
+                // reset all indices
                 b.Aidx = b.Vidx = b.Qidx = b.Pidx = -1;
-                b.Aidx = b.Pidx = aidx++;
+                b.Aidx = b.Pidx = aidx++; // assign indices
                 if (b.BusType == BusTypeEnum.PQ)
                 {
-                    b.Vidx = b.Qidx = vidx++;
+                    b.Vidx = b.Qidx = vidx++; // assign indices
                 }
             }
 
@@ -59,6 +104,8 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
             var ctx = new NRBuses
             {
+                AllBuses = buses.ToList(),
+                SlackBus = buses.Where(b => b.BusType == BusTypeEnum.Slack).First(),
                 PQBuses = pqBuses, // calc V and A, given P and Q
                 PVBuses = lstBuses
                     .Where(b => b.BusType == BusTypeEnum.PV)
@@ -82,15 +129,15 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// P/A derivative Jacobian matrix.
         /// Diagonal entries
         /// </summary>
-        public static double CalcJ1kk(BusResult bk, MC Y, BU buses)
+        public static double CalcJ1kk(BusResult bk, MC Y, NRBuses nrBuses)
         {
-            var jk = bk.Pidx;
+            var jk = bk.BusData.BusIndex;
             var vk = bk.BusVoltage;
-            var skn = buses
-                .Where(bn => bn.Aidx != jk)
+            var skn = nrBuses.AllBuses
+                .Where(bn => bn.BusData.BusIndex != jk)
                 .Select(bn => {
                     var vn = bn.BusVoltage;
-                    var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
+                    var ykn = Y[jk, bn.BusData.BusIndex];
                     var a = vk.Phase - ykn.Phase - vn.Phase;
                     var s = ykn.Magnitude * vn.Magnitude * Math.Sign(a);
                     return s;
@@ -99,15 +146,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return -vk.Magnitude * skn;
         }
 
-
         /// <summary>
         /// P/A derivative Jacobian matrix.
         /// Off-diagonal entries
         /// </summary>
         public static double CalcJ1kn(BusResult bk, BusResult bn, MC Y)
         {
-            var jk = bk.Pidx;
-            var jn = bn.Aidx;
             var vk = bk.BusVoltage;
             var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
             var jkn = (vk * ykn.Conjugate() * bn.BusVoltage.Conjugate()).Imaginary;
@@ -125,18 +169,18 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             {
                 var jk = bk.Pidx;
                 var vk = bk.BusVoltage;
+                var bkIdx = bk.BusData.BusIndex;
                 foreach (var bn in nrBuses.Buses) // column
                 {
                     var jn = bn.Aidx;
-                    if (jk == jn)
+                    if (bkIdx == bn.BusData.BusIndex)
                     {
-                        var jkk = CalcJ1kk(bk, Y, nrBuses.Buses);
-                        J[jk, jk] = jkk;
+                        var jkk = CalcJ1kk(bk, Y, nrBuses);
+                        J[jk, jn] = jkk;
                     }
                     else
                     {
-                        var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-                        var jkn = (vk * ykn.Conjugate() * bn.BusVoltage.Conjugate()).Imaginary;
+                        var jkn = CalcJ1kn(bk, bn, Y);
                         J[jk, jn] = jkn;
                     }
                 }
@@ -152,17 +196,17 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// P/V derivative Jacobian matrix.
         /// Diagonal entries
         /// </summary>
-        public static double CalcJ2kk(BusResult bk, MC Y, BU pqBuses)
+        public static double CalcJ2kk(BusResult bk, MC Y, NRBuses nRBuses)
         {
-            var jk = bk.Pidx;
+            var jk = bk.BusData.BusIndex;
             var vk = bk.BusVoltage;
-            var ykk = Y[bk.BusData.BusIndex, bk.BusData.BusIndex];
-            var skk = pqBuses
-                .Where(bn => bn.Vidx != jk)
+            var ykk = Y[jk, jk];
+            var skk = nRBuses.AllBuses
+                .Where(bn => bn.BusData.BusIndex != jk)
                 .Select(bn =>
                 {
                     var vn = bn.BusVoltage;
-                    var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
+                    var ykn = Y[jk, bn.BusData.BusIndex];
                     var a = vk.Phase - ykn.Phase - vn.Phase;
                     var s = ykn.Magnitude * vn.Magnitude * Math.Cos(a);
                     return s;
@@ -178,8 +222,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// </summary>
         public static double CalcJ2kn(BusResult bk, BusResult bn, MC Y)
         {
-            var jk = bk.Pidx;
-            var jn = bn.Vidx;
             var vk = bk.BusVoltage;
             var vn = bk.BusVoltage;
             var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
@@ -199,20 +241,19 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             {
                 var jk = bk.Pidx;
                 var vk = bk.BusVoltage;
+                var bkIdx = bk.BusData.BusIndex;
                 foreach (var bn in nrBuses.PQBuses) // column
                 {
                     var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
                     var jn = bn.Vidx;
-                    if (jk == jn)
+                    if (bkIdx == bn.BusData.BusIndex)
                     {
-                        var jkk = CalcJ2kk(bk, Y, nrBuses.PQBuses);
-                        J[jk, jk] = jkk;
+                        var jkk = CalcJ2kk(bk, Y, nrBuses);
+                        J[jk, jn] = jkk;
                     }
                     else
                     {
-                        var vn = bk.BusVoltage;
-                        var a = vk.Phase - ykn.Phase - vn.Phase;
-                        var jkn = vk.Magnitude * ykn.Magnitude * Math.Cos(a);
+                        var jkn = CalcJ2kn(bk, bn, Y);
                         J[jk, jn] = jkn;
                     }
                 }
@@ -228,16 +269,16 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// Q/A derivative Jacobian matrix.
         /// Diagonal entries.
         /// </summary>
-        public static double CalcJ3kk(BusResult bk, MC Y, BU buses)
+        public static double CalcJ3kk(BusResult bk, MC Y, NRBuses nRBuses)
         {
-            var jk = bk.Qidx;
+            var jk = bk.BusData.BusIndex;
             var vk = bk.BusVoltage;
-            var skk = buses
-                .Where(bn => bn.Aidx != jk)
+            var skk = nRBuses.AllBuses
+                .Where(bn => bn.BusData.BusIndex != jk)
                 .Select(bn =>
                 {
                     var vn = bn.BusVoltage;
-                    var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
+                    var ykn = Y[jk, bn.BusData.BusIndex];
                     var a = vk.Phase - ykn.Phase - vn.Phase;
                     var s = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Cos(a);
                     return s;
@@ -252,8 +293,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// </summary>
         public static double CalcJ3kn(BusResult bk, BusResult bn, MC Y)
         {
-            var jk = bk.Qidx;
-            var jn = bn.Aidx;
             var vk = bk.BusVoltage;
             var vn = bn.BusVoltage;
             var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
@@ -274,20 +313,19 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             {
                 var jk = bk.Qidx;
                 var vk = bk.BusVoltage;
+                var bkIdx = bk.BusData.BusIndex;
                 foreach (var bn in nrBuses.Buses) // column
                 {
                     var jn = bn.Aidx;
                     var vn = bn.BusVoltage;
-                    if (jk == jn)
+                    if (bkIdx == bn.BusData.BusIndex)
                     {
-                        var jkk = CalcJ3kk(bk, Y, nrBuses.Buses);
-                        J[jk, jk] = jkk;
+                        var jkk = CalcJ3kk(bk, Y, nrBuses);
+                        J[jk, jn] = jkk;
                     }
                     else
                     {
-                        var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-                        var a = vk.Phase - ykn.Phase - vn.Phase;
-                        var jkn = -vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Cos(a);
+                        var jkn = CalcJ3kn(bk, bn, Y);
                         J[jk, jn] = jkn;
                     }
                 }
@@ -303,17 +341,17 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// Q/V derivative Jacobian matrix.
         /// Diagonal entries.
         /// </summary>
-        public static double CalcJ4kk(BusResult bk, MC Y, BU pqBuses)
+        public static double CalcJ4kk(BusResult bk, MC Y, NRBuses nRBuses)
         {
-            var jk = bk.Qidx;
+            var jk = bk.BusData.BusIndex;
             var vk = bk.BusVoltage;
-            var ykk = Y[bk.BusData.BusIndex, bk.BusData.BusIndex];
-            var skk = pqBuses
-                .Where(bn => bn.Vidx != jk)
+            var ykk = Y[jk, jk];
+            var skk = nRBuses.AllBuses
+                .Where(bn => bn.BusData.BusIndex != jk)
                 .Select(bn =>
                 {
                     var vn = bn.BusVoltage;
-                    var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
+                    var ykn = Y[jk, bn.BusData.BusIndex];
                     var a = vk.Phase - ykn.Phase - vn.Phase;
                     var s = ykn.Magnitude * vn.Magnitude * Math.Sign(a);
                     return s;
@@ -329,8 +367,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// </summary>
         public static double CalcJ4kn(BusResult bk, BusResult bn, MC Y)
         {
-            var jk = bk.Qidx;
-            var jn = bn.Vidx;
             var vk = bk.BusVoltage;
             var vn = bn.BusVoltage;
             var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
@@ -350,20 +386,19 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             {
                 var jk = bk.Qidx;
                 var vk = bk.BusVoltage;
+                var bkIdx = bk.BusData.BusIndex;
                 foreach (var bn in nrBuses.PQBuses) // column
                 {
                     var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
                     var jn = bn.Vidx;
-                    if (jk == jn)
+                    if (bkIdx == bn.BusData.BusIndex)
                     {
-                        var jkk = CalcJ4kk(bk, Y, nrBuses.PQBuses);
-                        J[jk, jk] = jkk;
+                        var jkk = CalcJ4kk(bk, Y, nrBuses);
+                        J[jk, jn] = jkk;
                     }
                     else
                     {
-                        var vn = bn.BusVoltage;
-                        var a = vk.Phase - ykn.Phase - vn.Phase;
-                        var jkn = vk.Magnitude * ykn.Magnitude * Math.Sign(a);
+                        var jkn = CalcJ4kn(bk, bn, Y);
                         J[jk, jn] = jkn;
                     }
                 }
@@ -373,6 +408,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         #endregion
 
+        /// <summary>
+        /// Calculate Jacobian matrix
+        /// </summary>
         public static MD CreateJMatrix(MC Y, NRBuses nrBuses)
         {
             var J1 = CreateJ1(Y, nrBuses);

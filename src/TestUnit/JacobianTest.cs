@@ -1,41 +1,45 @@
-﻿using EEMathLib.LoadFlow.NewtonRaphson;
+﻿using EEMathLib.LoadFlow.Data;
+using EEMathLib.LoadFlow.NewtonRaphson;
 
 namespace TestUnit
 {
+    /// <summary>
+    /// Tests based on sample data LFData
+    /// </summary>
     public class JacobianTest : IClassFixture<Context>
     {
-        private Context _ctx;
+        private LFData _data;
 
         public JacobianTest(Context ctx)
         {
-            this._ctx = ctx;
+            _data = ctx.LoadFlowData;
         }
 
         [Fact]
         public void Calc_J1_Partial()
         {
-            var c = NRExample.Calc_J1_Partial(_ctx.LoadFlowData);
+            var c = NRExample.Calc_J1_Partial(_data);
             Assert.True(c, "NR JMatrix calculation failed");
         }
 
         [Fact]
         public void Calc_JMatrix()
         {
-            var c = NRExample.Calc_JMatrix(_ctx.LoadFlowData);
+            var c = NRExample.Calc_JMatrix(_data, 1);
             Assert.True(c, "NR JMatrix calculation failed");
         }
 
         [Fact]
         public void Calc_Jkk()
         {
-            var c = NRExample.Calc_Jkk(_ctx.LoadFlowData, true, false, false, false);
+            var c = NRExample.Calc_Jkk(_data, true, false, false, false, 1);
             Assert.True(c, "NR JMatrix calculation failed");
         }
 
         [Fact]
         public void Calc_Jkn()
         {
-            var c = NRExample.Calc_Jkn(_ctx.LoadFlowData, true, false, false, false);
+            var c = NRExample.Calc_Jkn(_data, true, false, false, false, 1);
             Assert.True(c, "NR JMatrix calculation failed");
         }
 

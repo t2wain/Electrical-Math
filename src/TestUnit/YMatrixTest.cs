@@ -1,34 +1,37 @@
 ﻿using EEMathLib.LoadFlow;
+using EEMathLib.LoadFlow.Data;
 
 namespace TestUnit
 {
-    public class LFNetworkTest : IClassFixture<Context>
+    public class YMatrixTest : IClassFixture<Context>
     {
-        Context _ctx;
+        LFData _data;
+        LFData2 _data2;
 
-        public LFNetworkTest(Context ctx)
+        public YMatrixTest(Context ctx)
         {
-            this._ctx = ctx;
+            _data = ctx.LoadFlowData;
+            _data2 = ctx.LoadFlowData2;
         }
 
         [Fact]
         public void BuildYMatrix_Partial()
         {
-            var c = NetworkExample.BuildYMatrix_Partial_LFData(_ctx.LoadFlowData);
+            var c = NetworkExample.BuildYMatrix_Partial_LFData(_data);
             Assert.True(c, "Build Y matrix ex1 failed.");
         }
 
         [Fact]
         public void BuildYMatrix()
         {
-            var c = NetworkExample.BuildYMatrix(_ctx.LoadFlowData);
+            var c = NetworkExample.BuildYMatrix(_data);
             Assert.True(c, "Build Y matrix ex1 failed.");
         }
 
         [Fact]
         public void BuildYMatrix2()
         {
-            var c = NetworkExample.BuildYMatrix(_ctx.LoadFlowData2);
+            var c = NetworkExample.BuildYMatrix(_data2);
             Assert.True(c, "Build Y matrix ex1 failed.");
         }
 

@@ -6,11 +6,117 @@ using System.Numerics;
 
 namespace EEMathLib.LoadFlow.Data
 {
+    class LFData_NRData : NewtonRaphsonData
+    {
+        class Jacobian : JacobianData
+        {
+            public Jacobian()
+            {
+                J1Result = new MxDTO<double>
+                {
+                    RowSize = 4,
+                    ColumnSize = 4,
+                    EntriesType = MxDTO<double>.ROW_ENTRIES,
+                    Entries = new double[]
+                    {
+                        29.76,  0, -9.91, -19.84,
+                        0, 104.41, -104.41, 0,
+                        -9.92, -104.41, 154.01, -39.68,
+                        -19.84, 0, -39.68, 109.24,
+                    }
+                };
+            }
+
+            public override double GetJ1kk(BusResult b1, Matrix<double> res = null)
+            {
+                if (b1.ID == "2")
+                    return 29.76;
+                else if (b1.ID == "3")
+                    return 104.41;
+                else if (b1.ID == "4")
+                    return 154.01;
+                else if (b1.ID == "5")
+                    return 109.24;
+                else throw new Exception();
+            }
+
+            public override double GetJ1kn(BusResult b1,
+                BusResult b2, Matrix<double> res = null)
+            {
+                if (b1.ID == "2")
+                {
+                    switch (b2.ID)
+                    {
+                        case "3":
+                            return 0;
+                        case "4":
+                            return -9.92;
+                        case "5":
+                            return -19.84;
+                        default:
+                            throw new Exception();
+                    }
+                }
+                else if (b1.ID == "3")
+                {
+                    switch (b2.ID)
+                    {
+                        case "2":
+                        case "5":
+                            return 0;
+                        case "4":
+                            return -104.41;
+                        default:
+                            throw new Exception();
+                    }
+                }
+                else if (b1.ID == "4")
+                {
+                    switch (b2.ID)
+                    {
+                        case "2":
+                            return -9.92;
+                        case "3":
+                            return -104.41;
+                        case "5":
+                            return -39.68;
+                        default:
+                            throw new Exception();
+                    }
+                }
+                else if (b1.ID == "5")
+                {
+                    switch (b2.ID)
+                    {
+                        case "2":
+                            return -19.84;
+                        case "3":
+                            return 0;
+                        case "4":
+                            return -39.68;
+                        default:
+                            throw new Exception();
+                    }
+                }
+                else throw new Exception();
+            }
+
+        }
+
+        public LFData_NRData()
+        {
+            Iteration = 1;
+            JacobianData = new Jacobian();
+        }
+    }
+
     /// <summary>
     /// Load flow dataset #1 for testing
     /// </summary>
     public class LFData : LFDataAbstract
     {
+        INewtonRaphsonData _nrdata;
+
         public LFData()
         {
             _Busses = new List<EEBus>
@@ -166,93 +272,9 @@ namespace EEMathLib.LoadFlow.Data
                 }
             };
 
-            _J1Result = new MxDTO<double>
-            {
-                RowSize = 4,
-                ColumnSize = 4,
-                EntriesType = MxDTO<double>.ROW_ENTRIES,
-                Entries = new double[]
-                {
-                    29.76,  0, -9.91, -19.84,
-                    0, 104.41, -104.41, 0,
-                    -9.92, -104.41, 154.01, -39.68,
-                    -19.84, 0, -39.68, 109.24,
-                }
-            };
+            _nrdata = new LFData_NRData();
         }
 
-        public override double GetJ1kk(BusResult b1, Matrix<double> res = null)
-        {
-            if (b1.ID == "2")
-                return 29.76;
-            else if (b1.ID == "3")
-                return 104.41;
-            else if (b1.ID == "4")
-                return 154.01;
-            else if (b1.ID == "5")
-                return 109.24;
-            else throw new Exception();
-        }
-
-        public override double GetJ1kn(BusResult b1, 
-            BusResult b2, Matrix<double> res = null)
-        {
-            if (b1.ID == "2")
-            {
-                switch (b2.ID) 
-                {
-                    case "3":
-                        return 0;
-                    case "4":
-                        return -9.92;
-                    case "5":
-                        return -19.84;
-                    default:
-                        throw new Exception();
-                }
-            }
-            else if (b1.ID == "3") 
-            {
-                switch (b2.ID)
-                {
-                    case "2":
-                    case "5":
-                        return 0;
-                    case "4":
-                        return -104.41;
-                    default:
-                        throw new Exception();
-                }
-            }
-            else if (b1.ID == "4")
-            {
-                switch (b2.ID)
-                {
-                    case "2":
-                        return -9.92;
-                    case "3":
-                        return -104.41;
-                    case "5":
-                        return -39.68;
-                    default:
-                        throw new Exception();
-                }
-            }
-            else if (b1.ID == "5")
-            {
-                switch (b2.ID)
-                {
-                    case "2":
-                        return -19.84;
-                    case "3":
-                        return 0;
-                    case "4":
-                        return -39.68;
-                    default:
-                        throw new Exception();
-                }
-            }
-            else throw new Exception();
-        }
+        public override INewtonRaphsonData GetNewtonRaphsonData(int iteration = 0) => _nrdata;
     }
 }

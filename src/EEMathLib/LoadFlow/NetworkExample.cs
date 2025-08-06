@@ -2,6 +2,9 @@
 using EEMathLib.MatrixMath;
 namespace EEMathLib.LoadFlow
 {
+    /// <summary>
+    /// Test the EENetwork class
+    /// </summary>
     public static class NetworkExample
     {
 

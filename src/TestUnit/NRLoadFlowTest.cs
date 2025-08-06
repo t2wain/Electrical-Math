@@ -1,35 +1,37 @@
-﻿using EEMathLib.LoadFlow.NewtonRaphson;
+﻿using EEMathLib.LoadFlow.Data;
+using EEMathLib.LoadFlow.NewtonRaphson;
 
 namespace TestUnit
 {
     public class NRLoadFlowTest : IClassFixture<Context>
     {
-        private readonly Context _ctx;
+        Context _ctx;
 
         public NRLoadFlowTest(Context ctx)
         {
             this._ctx = ctx;
         }
 
+
         [Fact]
-        public void Calc_PQDelta()
+        public void Calc_PQDelta_Partial_LFData()
         {
-            var c = NRExample.Calc_PQDelta(_ctx.LoadFlowData);
-            Assert.True(c, "NR power calculation failed");
+            var c = NRExample.Calc_PQDelta_Partial(_ctx.LoadFlowData);
+            Assert.True(c);
         }
 
         [Fact]
         public void Calc_LoadFlow()
         {
             var c = NRExample.LFSolve(_ctx.LoadFlowData);
-            Assert.True(c, "Load flow calculation failed");
+            Assert.True(c);
         }
 
         [Fact]
         public void Calc_FastDecoupled_LoadFlow()
         {
             var c = NRExample.LFSolve_FastDecoupled(_ctx.LoadFlowData);
-            Assert.True(c, "Load flow calculation failed");
+            Assert.True(c);
         }
 
     }

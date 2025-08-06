@@ -2,13 +2,17 @@
 using EEMathLib.LoadFlow.Data;
 using System.Linq;
 using LFC = EEMathLib.LoadFlow.LFCommon;
-using LFGS = EEMathLib.LoadFlow.GaussSiedel.LFGaussSiedel;
+using LFGS = EEMathLib.LoadFlow.GaussSeidel.LFGaussSeidel;
 
-namespace EEMathLib.LoadFlow.GaussSiedel
+namespace EEMathLib.LoadFlow.GaussSeidel
 {
+    /// <summary>
+    /// Tests for various calculations
+    /// in Gauss-Seidel algorithm
+    /// </summary>
     public static class GSExample
     {
-        #region Gauss-Siedel examples
+        #region Gauss-Seidel examples
 
         /// <summary>
         /// Calculate bus "2" voltage at iteration 1.
@@ -29,7 +33,7 @@ namespace EEMathLib.LoadFlow.GaussSiedel
         }
 
         /// <summary>
-        /// Solve load flow using Gauss-Siedel method.
+        /// Solve load flow using Gauss-Seidel method.
         /// </summary>
         public static bool Solve(ILFData data)
         {

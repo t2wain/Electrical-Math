@@ -33,6 +33,11 @@ namespace EEMathLib.LoadFlow.Data
         /// </summary>
         MxDTO<Complex> YResult { get; }
 
+        INewtonRaphsonData GetNewtonRaphsonData(int iteration = 0);
+    }
+
+    public interface IJacobianData
+    {
         /// <summary>
         /// J1 matrix result for testing
         /// </summary>
@@ -64,4 +69,73 @@ namespace EEMathLib.LoadFlow.Data
         double GetJ1kn(BusResult b1, BusResult b2, Matrix<double> res = null);
     }
 
+    /// <summary>
+    /// PDelta = Pspecify - PCal;
+    /// QDelta = Qspecify - QCal;
+    /// Mismach vector MDelta = [ PDelta, QDelta ];
+    /// Correction vector [XDelta] = [ADelta, VDelata];
+    /// [J][XDelta] = [MDelta]
+    /// </summary>
+    public interface INewtonRaphsonData
+    {
+        int Iteration { get; }
+
+        /// <summary>
+        /// Jacobian matrix [J]
+        /// </summary>
+        IJacobianData JacobianData { get; }
+
+        #region Mismatch vector MDelta
+
+        /// <summary>
+        /// PDelta = Pspecify - PCal;
+        /// </summary>
+        double[] PCal { get; }
+
+        /// <summary>
+        /// QDelta = Qspecify - QCal;
+        /// </summary>
+        double[] QCal { get; }
+
+        /// <summary>
+        /// PDelta = Pspecify - PCal;
+        /// </summary>
+        double[] PDelta { get; }
+
+        /// <summary>
+        /// QDelta = Qspecify - QCal;
+        /// </summary>
+        double[] QDelta { get; }
+
+        /// <summary>
+        /// Mismach vector MDelta = [ PDelta, QDelta ];
+        /// </summary>
+        double[] MDelta { get; }
+
+        #endregion
+
+        #region Correction vector
+
+        /// <summary>
+        /// Correction vector [XDelta] = [ADelta, VDelata]
+        /// </summary>
+        double[] ADelta { get; }
+
+        /// <summary>
+        /// Correction vector [XDelta] = [ADelta, VDelata]
+        /// </summary>
+        double[] VDelta { get; }
+
+        #endregion
+
+        /// <summary>
+        /// VBus result
+        /// </summary>
+        double[] VBus { get; }
+
+        /// <summary>
+        /// ABus result
+        /// </summary>
+        double[] ABus { get; }
+    }
 }

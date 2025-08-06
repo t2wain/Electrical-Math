@@ -7,12 +7,12 @@ using System.Linq;
 using System.Numerics;
 using LFC = EEMathLib.LoadFlow.LFCommon;
 
-namespace EEMathLib.LoadFlow.GaussSiedel
+namespace EEMathLib.LoadFlow.GaussSeidel
 {
     /// <summary>
     /// Gauss-Siedel load flow algorithm
     /// </summary>
-    public static class LFGaussSiedel
+    public static class LFGaussSeidel
     {
         /// <summary>
         /// Calculate load flow

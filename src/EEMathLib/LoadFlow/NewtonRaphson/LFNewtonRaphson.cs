@@ -1,18 +1,19 @@
 ﻿using EEMathLib.DTO;
 using EEMathLib.LoadFlow.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
+using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 using LFC = EEMathLib.LoadFlow.LFCommon;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
-using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
     /// <summary>
-    /// Newton-Rappson load flow algorithm
+    /// Newton-Raphson load flow algorithm
     /// </summary>
     public static class LFNewtonRaphson
     {
@@ -21,14 +22,14 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// Calculate load flow
         /// </summary>
         public static Result<BU> Solve(EENetwork network,
-            double threshold = 0.015, int maxIteration = 20, int minIteration = 5) =>
-            Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration, minIteration);
+            double threshold = 0.015, int maxIteration = 20) =>
+            Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration);
 
         /// <summary>
         /// Calculate load flow
         /// </summary>
         public static Result<BU> Solve(BU buses, MC YMatrix,
-            double threshold = 0.015, int maxIteration = 20, int minIteration = 5)
+            double threshold = 0.015, int maxIteration = 20)
         {
             var Y = YMatrix;
 
@@ -36,21 +37,53 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
             var isFound = false;
             var i = 0;
+            // min error found during iterations
+            var lastMinErr = Double.MaxValue; 
             while (i++ < maxIteration)
             {
+                // Step 1
                 var nrBuses = JC.ReIndexBusPQ(buses);
 
-                #region Calculate delta PQ and VA
-
+                // Step 2
                 var mxPQdelta = CalcDeltaPQ(Y, nrBuses); // delta P and Q
-                var J = Jacobian.CreateJMatrix(Y, nrBuses);
 
-                var mxAVdelta = J.Solve(mxPQdelta); // delta A and V
+                #region Check for solution and divergence
+
+                // Step 3
+                var err = mxPQdelta
+                    .ToColumnMajorArray()
+                    .Select(v => Math.Abs(v))
+                    .Max();
+                if (err <= threshold) // check for solution
+                {
+                    isFound = true;
+                    break;
+                }
+                else if (i == 1 || i % 5 == 0) // check for divergence
+                {
+                    //if (err > lastMinErr)
+                    //    return new Result<BU>
+                    //    {
+                    //        Data = buses,
+                    //        IterationStop = i,
+                    //        Error = ErrorEnum.Divergence,
+                    //        ErrorMessage = "Divergence detected during Gauss-Siedel iterations."
+                    //    };
+                    //else lastMinErr = Math.Min(lastMinErr, err);
+                    lastMinErr = Math.Min(lastMinErr, err);
+                }
 
                 #endregion
 
+                // Step 4
+                var J = JC.CreateJMatrix(Y, nrBuses);
+
+                // Step 5
+                var mxAVdelta = J.Solve(mxPQdelta); // delta A and V
+
                 #region Update bus PQ and VA
 
+                // Step 6
                 foreach (var b in nrBuses.Buses)
                 {
                     var ik = b.Pidx;
@@ -98,28 +131,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
                 #endregion
 
-                #region Check for solution and divergence
-
-                if (i < minIteration)
-                    continue;
-                else if (IsSolutionFound(buses, threshold))
-                {
-                    isFound = true;
-                    break;
-                }
-                else if (IsDiverged(buses, i))
-                {
-                    return new Result<BU>
-                    {
-                        Data = buses,
-                        IterationStop = i,
-                        Error = ErrorEnum.Divergence,
-                        ErrorMessage = "Divergence detected during Gauss-Siedel iterations."
-                    };
-                }
-
-                #endregion
-
             }
 
             #endregion
@@ -162,54 +173,22 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             var buses = nrBuses.Buses;
             var N = nrBuses.J1Size.Row;
             var mx = MD.Build.Dense(nrBuses.JSize.Row, 1, 0.0);
-            foreach (var b in buses)
+            foreach (var bk in buses)
             {
-                var sk = LFC.CalcPower(b, Y, buses);
+                var sk = LFC.CalcPower(bk, Y, nrBuses.AllBuses);
 
-                var pdk = b.Sbus.Real - sk.Real;
-                mx[b.Pidx, 0] = pdk; // delta P
+                var pdk = bk.Sbus.Real - sk.Real;
+                mx[bk.Pidx, 0] = pdk; // delta P
 
-                if (b.BusType == BusTypeEnum.PQ)
+                if (bk.BusType == BusTypeEnum.PQ)
                 {
-                    var qdk = b.Sbus.Imaginary - sk.Imaginary;
-                    mx[b.Qidx + N, 0] = qdk; // delta Q
+                    var qdk = bk.Sbus.Imaginary - sk.Imaginary;
+                    mx[bk.Qidx + N, 0] = qdk; // delta Q
                 }
             }
             return mx;
         }
 
-        #endregion
-
-        #region Track error and convergence
-
-        static bool IsSolutionFound(BU buses, double threshold)
-        {
-            var cv = true;
-            foreach (var bus in buses.Where(b => b.BusType != BusTypeEnum.Slack))
-            {
-                cv = cv && bus.Err.QErr < threshold;
-                if (bus.BusData.BusType != BusTypeEnum.PV)
-                {
-                    cv = cv && bus.Err.PErr < threshold;
-                }
-            }
-            return cv;
-        }
-
-        static bool IsDiverged(BU buses, int iteration)
-        {
-            if (iteration % 5 != 0)
-                return false;
-
-            var cv = true;
-            foreach (var bus in buses.Where(b => b.BusType != BusTypeEnum.Slack))
-            {
-                cv = cv && bus.Err.QErr < bus.ErrRef.QErr;
-                if (bus.BusData.BusType != BusTypeEnum.PV)
-                    cv = cv && bus.Err.PErr < bus.ErrRef.PErr;
-            }
-            return !cv;
-        }
         #endregion
     }
 }

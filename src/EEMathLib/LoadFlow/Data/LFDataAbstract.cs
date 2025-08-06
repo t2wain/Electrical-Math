@@ -6,6 +6,36 @@ using System.Numerics;
 
 namespace EEMathLib.LoadFlow.Data
 {
+    public class NewtonRaphsonData : INewtonRaphsonData
+    {
+        public int Iteration { get; set; }
+        public IJacobianData JacobianData { get; set; }
+
+        public double[] PCal { get; set; }
+        public double[] QCal { get; set; }
+        public double[] PDelta { get; set; }
+        public double[] QDelta { get; set; }
+        public double[] MDelta { get; set; }
+
+        public double[] ADelta { get; set; }
+        public double[] VDelta { get; set; }
+
+        public double[] VBus { get; set; }
+        public double[] ABus { get; set; }
+    }
+
+    public class JacobianData : IJacobianData
+    {
+        public MxDTO<double> J1Result { get; set; }
+        public MxDTO<double> J2Result { get; set; }
+        public MxDTO<double> J3Result { get; set; }
+        public MxDTO<double> J4Result { get; set; }
+        public virtual double GetJ1kk(BusResult b1, Matrix<double> res = null) =>
+            throw new NotImplementedException();
+        public virtual double GetJ1kn(BusResult b1, BusResult b2, Matrix<double> res = null) =>
+            throw new NotImplementedException();
+    }
+
     /// <summary>
     /// Load flow dataset base implementation
     /// </summary>
@@ -18,10 +48,6 @@ namespace EEMathLib.LoadFlow.Data
         protected IEnumerable<EELine> _Lines; 
         protected IEnumerable<EEBus> _LFResult; 
         protected MxDTO<Complex> _YResult;
-        protected MxDTO<double> _J1Result;
-        protected MxDTO<double> _J2Result;
-        protected MxDTO<double> _J3Result;
-        protected MxDTO<double> _J4Result;
 
         public double BasePower => _BasePower;
 
@@ -30,12 +56,6 @@ namespace EEMathLib.LoadFlow.Data
 
         public IEnumerable<EEBus> LFResult => _LFResult;
         public MxDTO<Complex> YResult => _YResult;
-        public MxDTO<double> J1Result => _J1Result;
-        public MxDTO<double> J2Result => _J2Result;
-        public MxDTO<double> J3Result => _J3Result;
-        public MxDTO<double> J4Result => _J4Result;
-        public abstract double GetJ1kk(BusResult b1, Matrix<double> res = null);
-        public abstract double GetJ1kn(BusResult b1, BusResult b2, Matrix<double> res = null);
 
         public virtual EENetwork CreateNetwork()
         {
@@ -48,6 +68,7 @@ namespace EEMathLib.LoadFlow.Data
             return _network;
         }
 
+        public abstract INewtonRaphsonData GetNewtonRaphsonData(int iteration = 0);
 
         protected Complex Zero => Complex.Zero;
         protected Complex C(double g, double b) => new Complex(g, b);
@@ -60,10 +81,6 @@ namespace EEMathLib.LoadFlow.Data
             _Lines = null;
             _LFResult = null;
             _YResult = null;
-            _J1Result = null;
-            _J2Result = null;
-            _J2Result = null;
-            _J4Result = null;
         }
     }
 }

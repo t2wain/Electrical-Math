@@ -1,27 +1,28 @@
-﻿using EEMathLib.LoadFlow.GaussSiedel;
+﻿using EEMathLib.LoadFlow.Data;
+using EEMathLib.LoadFlow.GaussSeidel;
 
 namespace TestUnit
 {
     public class GSLoadFlowTest : IClassFixture<Context>
     {
-        private readonly Context _ctx;
+        LFData _data;
 
         public GSLoadFlowTest(Context ctx)
         {
-            this._ctx = ctx;
+            _data = ctx.LoadFlowData;
         }
 
         [Fact]
         public void LoadFlowGS_CalcVoltage() 
         {
-            var c = GSExample.CalcVoltage(_ctx.LoadFlowData);
+            var c = GSExample.CalcVoltage(_data);
             Assert.True(c);
         }
 
         [Fact]
         public void LoadFlowGS_Solve()
         {
-            var c = GSExample.Solve(_ctx.LoadFlowData);
+            var c = GSExample.Solve(_data);
             Assert.True(c, "Load flow calculation failed");
         }
     }
