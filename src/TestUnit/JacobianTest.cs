@@ -23,9 +23,9 @@ namespace TestUnit
         }
 
         [Fact]
-        public void Calc_JMatrix()
+        public void Calc_J1_J2_J3_J4()
         {
-            var c = NRExample.Calc_JMatrix(_data, 1);
+            var c = NRExample.Calc_J1_J2_J3_J4(_data, 1);
             Assert.True(c, "NR JMatrix calculation failed");
         }
 

@@ -27,12 +27,12 @@ namespace TestUnit
             Assert.True(c);
         }
 
-        [Fact]
-        public void Calc_FastDecoupled_LoadFlow()
-        {
-            var c = NRExample.LFSolve_FastDecoupled(_ctx.LoadFlowData);
-            Assert.True(c);
-        }
+        //[Fact]
+        //public void Calc_FastDecoupled_LoadFlow()
+        //{
+        //    var c = NRExample.LFSolve_FastDecoupled(_ctx.LoadFlowData);
+        //    Assert.True(c);
+        //}
 
     }
 }

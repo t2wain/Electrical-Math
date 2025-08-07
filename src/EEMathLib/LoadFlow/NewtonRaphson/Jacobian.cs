@@ -25,6 +25,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             /// All buses in the network including slack bus
             /// </summary>
             public BU AllBuses { get; set; }
+            public BU AllPVBuses { get; set; }
 
             public BusResult SlackBus { get; set; }
 
@@ -105,6 +106,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             var ctx = new NRBuses
             {
                 AllBuses = buses.ToList(),
+                AllPVBuses = lstBuses.Where(b => b.BusData.BusType == BusTypeEnum.PV).ToList(),
                 SlackBus = buses.Where(b => b.BusType == BusTypeEnum.Slack).First(),
                 PQBuses = pqBuses, // calc V and A, given P and Q
                 PVBuses = lstBuses

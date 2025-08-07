@@ -1,9 +1,9 @@
 ﻿using EEMathLib.DTO;
 using EEMathLib.LoadFlow.Data;
 using EEMathLib.MatrixMath;
+using MathNet.Numerics.LinearAlgebra;
 using System.Collections.Generic;
 using System.Linq;
-using FD = EEMathLib.LoadFlow.NewtonRaphson.LFFastDecoupled;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 using LFC = EEMathLib.LoadFlow.LFCommon;
 using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
@@ -60,35 +60,56 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         #endregion
 
+        #region PQ
+
         public static bool Calc_PQ(ILFData data, int iteration)
         {
-            var res = data.GetNewtonRaphsonData(iteration);
             var nw = data.CreateNetwork();
             var buses = LFNR.Initialize(nw.Buses);
             var nrBuses = JC.ReIndexBusPQ(buses);
-            var c = true;
+            //var c = true;
             var YMatrix = MX.ParseMatrix(data.YResult);
+
+            var nrRes = new NRResult 
+            { 
+                Iteration = iteration, 
+                PCal = new double[nrBuses.Buses.Count()],
+                QCal = new double[nrBuses.PQBuses.Count()]
+            };
             foreach (var b in nrBuses.Buses) { 
                 var sb = LFC.CalcPower(b, YMatrix, nrBuses.AllBuses);
-                var PCalc = sb.Real;
-                var PRes = res.PCal[b.Pidx];
-                c &= Checker.EQ(PCalc, PRes, 0.0001);
+                nrRes.PCal[b.Pidx] = sb.Real;
                 if (b.BusType == BusTypeEnum.PQ)
                 {
-                    var QCalc = sb.Imaginary;
-                    var QRes = res.QCal[b.Qidx];
-                    c &= Checker.EQ(QCalc, QRes, 0.0001);
+                    nrRes.QCal[b.Qidx] = sb.Imaginary;
                 }
             }
+
+            var c = Validate_PQCalc(nrRes, data, iteration);
+
             return c;
         }
+
+        public static bool Calc_DeltaPQ(ILFData data, int iteration)
+        {
+            var nw = data.CreateNetwork();
+            var buses = LFNR.Initialize(nw.Buses);
+            var nrBuses = JC.ReIndexBusPQ(buses);
+            var YMatrix = MX.ParseMatrix(data.YResult);
+
+            var mxDeltaPQ = LFNR.CalcDeltaPQ(YMatrix, nrBuses);
+            var c = Validate_PQDelta(mxDeltaPQ, data, iteration);
+            return c;
+        }
+
+        #endregion
 
         #region JMatrix
 
         /// <summary>
         /// Test the calculation of JMatrix
         /// </summary>
-        public static bool Calc_JMatrix(ILFData data, 
+        public static bool Calc_J1_J2_J3_J4(ILFData data, 
             bool j1, bool j2, bool j3, bool j4, int iteration)
         {
             var nw = data.CreateNetwork();
@@ -96,37 +117,14 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             nw.YMatrix = MX.ParseMatrix(data.YResult); 
             var buses = LFNR.Initialize(nw.Buses);
             var nrBuses = JC.ReIndexBusPQ(buses);
-            var JRes = data.GetNewtonRaphsonData(iteration).JacobianData;
 
-            var c = true;
-            if (j1)
-            {
-                var J1 = JC.CreateJ1(nw.YMatrix, nrBuses);
-                var res = MX.ParseMatrix(JRes.J1Result);
-                var v = Checker.EQ(J1, res, 0.0001);
-                c = c && v.Valid;
-            }
-            if (j2)
-            {
-                var J2 = JC.CreateJ2(nw.YMatrix, nrBuses);
-                var res = MX.ParseMatrix(JRes.J2Result);
-                var v = Checker.EQ(J2, res, 0.0001);
-                c = c && v.Valid;
-            }
-            if (j3)
-            {
-                var J3 = JC.CreateJ3(nw.YMatrix, nrBuses);
-                var res = MX.ParseMatrix(JRes.J3Result);
-                var v = Checker.EQ(J3, res, 0.0001);
-                c = c && v.Valid;
-            }
-            if (j4)
-            {
-                var J4 = JC.CreateJ4(nw.YMatrix, nrBuses);
-                var res = MX.ParseMatrix(JRes.J4Result);
-                var v = Checker.EQ(J4, res, 0.0001);
-                c = c && v.Valid;
-            }
+            Matrix<double> J1, J2, J3, J4;
+            J1 = J2 = J3 = J4 = null;
+            if (j1) J1 = JC.CreateJ1(nw.YMatrix, nrBuses);
+            if (j2) J2 = JC.CreateJ2(nw.YMatrix, nrBuses);
+            if (j3) J3 = JC.CreateJ3(nw.YMatrix, nrBuses);
+            if (j4) J4 = JC.CreateJ4(nw.YMatrix, nrBuses);
+            var c = Validate_JMatrix(J1, J2, J3, J4, data, iteration);
 
             return c;
         }
@@ -134,8 +132,30 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// <summary>
         /// Test the calculation of JMatrix
         /// </summary>
-        public static bool Calc_JMatrix(ILFData data, int iteration) => 
-            Calc_JMatrix(data, true, true, true, true, iteration);
+        public static bool Calc_J1_J2_J3_J4(ILFData data, int iteration) => 
+            Calc_J1_J2_J3_J4(data, true, true, true, true, iteration);
+
+        /// <summary>
+        /// Test the calculation of JMatrix
+        /// </summary>
+        public static bool Calc_JMatrix(ILFData data, int iteration)
+        {
+            var nw = data.CreateNetwork();
+            // using YMatrix data instead of calculated value
+            nw.YMatrix = MX.ParseMatrix(data.YResult);
+            var buses = LFNR.Initialize(nw.Buses);
+            var nrBuses = JC.ReIndexBusPQ(buses);
+
+            var J = JC.CreateJMatrix(nw.YMatrix, nrBuses);
+            var nrRes = new NRResult
+            {
+                JMatrix = J,
+                NRBuses = nrBuses
+            };
+
+            var c = Validate_JMatrix(nrRes, data, iteration);
+            return c;
+        }
 
         #endregion
 
@@ -168,8 +188,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                         var pidx = bk.Pidx;
                         var aidx = bn.Aidx;
 
-                        //if (bk.Pidx != bn.Aidx)
-                        //    continue;
                         if (bk.BusData.BusIndex != bn.BusData.BusIndex)
                             continue;
 
@@ -192,11 +210,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 foreach (var bk in nrBuses.Buses)
                     foreach (var bn in nrBuses.PQBuses)
                     {
-                        var pidx = bk.Pidx;
-                        var vidx = bn.Vidx;
-
-                        //if (bk.Pidx != bn.Vidx)
-                        //    continue;
                         if (bk.BusData.BusIndex != bn.BusData.BusIndex)
                             continue;
 
@@ -219,11 +232,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 foreach (var bk in nrBuses.PQBuses)
                     foreach (var bn in nrBuses.Buses)
                     {
-                        var qidx = bk.Qidx;
-                        var aidx = bn.Aidx;
-
-                        //if (bk.Qidx != bn.Aidx)
-                        //    continue;
                         if (bk.BusData.BusIndex != bn.BusData.BusIndex)
                             continue;
 
@@ -246,11 +254,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 foreach (var bk in nrBuses.PQBuses)
                     foreach (var bn in nrBuses.PQBuses)
                     {
-                        var qidx = bk.Qidx;
-                        var vidx = bn.Vidx;
-
-                        //if (bk.Qidx != bn.Vidx)
-                        //    continue;
                         if (bk.BusData.BusIndex != bn.BusData.BusIndex)
                             continue;
 
@@ -381,6 +384,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
             var nw = data.CreateNetwork();
             var threshold = 0.001;
+
             var res = LFNR.Solve(nw, threshold, 50);
 
             if (res.Error == ErrorEnum.Divergence)
@@ -407,35 +411,155 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
             return c;
         }
-
-        public static bool LFSolve_FastDecoupled(ILFData data)
+        
+        public static bool LFIterate3times(ILFData data)
         {
-
             var nw = data.CreateNetwork();
-            var threshold = 0.001;
-            var res = FD.Solve(nw, threshold, 10, 3);
-
-            if (res.Error == ErrorEnum.Divergence)
-                return false;
-
-
-            var rbuses = LFC.CalcResult(res.Data).ToDictionary(bus => bus.ID);
-            var dbuses = data.LFResult.ToDictionary(bus => bus.ID);
+            nw.YMatrix = MX.ParseMatrix(data.YResult);
+            var buses = LFNR.Initialize(nw.Buses);
 
             var c = true;
-            foreach (var dbus in dbuses.Values)
-            {
-                var rb = rbuses[dbus.ID];
-                c = c && Checker.EQPct(rb.Voltage, dbus.Voltage, threshold);
-                c = c && Checker.EQPct(rb.Angle, dbus.Angle, threshold);
 
-                if (rb.BusType == BusTypeEnum.PQ
-                    || rb.BusType == BusTypeEnum.Slack)
-                {
-                    c = c && Checker.EQPct(rb.Pgen, dbus.Pgen, threshold);
-                    c = c && Checker.EQPct(rb.Qgen, dbus.Qgen, threshold);
-                }
+            {
+                // iteration 1
+                var res = LFNR.Iterate(buses, nw.YMatrix);
+                res.Iteration = 1;
+                var v = ValidateIteration(res, data);
+                c &= v;
             }
+
+            if (c)
+            {
+                // iteration 2
+                var res = LFNR.Iterate(buses, nw.YMatrix);
+                res.Iteration = 2;
+                var v = ValidateIteration(res, data);
+                c &= v;
+            }
+
+            if (c)
+            {
+                // iteration 3
+                var res = LFNR.Iterate(buses, nw.YMatrix);
+                res.Iteration = 3;
+                var v = ValidateIteration(res, data);
+                c &= v;
+            }
+
+            return true;
+        }
+
+        #endregion
+
+        #region Validate
+
+        public static bool ValidateIteration(NRResult res, ILFData data)
+        {
+            var v = Validate_JMatrix(res, data, res.Iteration);
+            v = Validate_PQCalc(res, data, res.Iteration);
+            v = Validate_PQDelta(res.PQDelta, data, res.Iteration);
+
+            return true;
+        }
+
+        public static bool Validate_JMatrix(NRResult nrRes, ILFData data, int iteration)
+        {
+            var c = true;
+
+            var nrBuses = nrRes.NRBuses;
+            var J = nrRes.JMatrix;
+            {
+                c = c && J.RowCount == nrBuses.JSize.Row;
+                c = c && J.ColumnCount == nrBuses.JSize.Col;
+            }
+
+            var J1 = J.SubMatrix(0, nrBuses.J1Size.Row, 0, nrBuses.J1Size.Col);
+            var J2 = J.SubMatrix(0, nrBuses.J2Size.Row, J1.ColumnCount, nrBuses.J2Size.Col);
+            var J3 = J.SubMatrix(J1.RowCount, nrBuses.J3Size.Row, 0, nrBuses.J3Size.Col);
+            var J4 = J.SubMatrix(J1.RowCount, nrBuses.J4Size.Row, J1.ColumnCount, nrBuses.J4Size.Col);
+
+            var v = Validate_JMatrix(J1, J2, J3, J4, data, iteration);
+            c &= v;
+
+            return c;
+        }
+
+        public static bool Validate_JMatrix(Matrix<double> J1, Matrix<double> J2, 
+            Matrix<double> J3, Matrix<double> J4, ILFData data, int iteration)
+        {
+            var err = 0.001;
+            var JRes = data.GetNewtonRaphsonData(iteration).JacobianData;
+
+            var c = true;
+            if (J1 != null)
+            {
+                var res = MX.ParseMatrix(JRes.J1Result);
+                var v = Checker.EQ(J1, res, err);
+                c = c && v.Valid;
+            }
+
+            if (J2 != null)
+            {
+                var res = MX.ParseMatrix(JRes.J2Result);
+                var v = Checker.EQ(J2, res, err);
+                c = c && v.Valid;
+            }
+
+            if (J3 != null)
+            {
+                var res = MX.ParseMatrix(JRes.J3Result);
+                var v = Checker.EQ(J3, res, err);
+                c = c && v.Valid;
+            }
+
+            if (J4 != null)
+            {
+                var res = MX.ParseMatrix(JRes.J4Result);
+                var v = Checker.EQ(J4, res, err);
+                c = c && v.Valid;
+            }
+
+            return c;
+
+        }
+
+        public static bool Validate_PQDelta(Matrix<double> mxPQDelta, ILFData data, int iteration)
+        {
+            var nrData = data.GetNewtonRaphsonData(iteration);
+            var c = true;
+            var rmx = Matrix<double>.Build.Dense(
+                mxPQDelta.RowCount,
+                mxPQDelta.ColumnCount, nrData.MDelta
+            );
+            var v = Checker.EQ(mxPQDelta, rmx, 0.001);
+            c &= v.Valid;
+            return c;
+        }
+
+        public static bool Validate_PQCalc(NRResult nrRes, ILFData data, int iteration)
+        {
+            var c = true;
+            var JRes = data.GetNewtonRaphsonData(iteration);
+
+            var v = Checker.EQ(nrRes.PCal, JRes.PCal, 0.0001);
+            c &= v.Valid;
+
+            v = Checker.EQ(nrRes.QCal, JRes.QCal, 0.0001);
+            c &= v.Valid;
+
+            return c;
+        }
+
+        public static bool Validate_AVDelta(NRResult nrRes, ILFData data, int iteration)
+        {
+            var c = true;
+            var JRes = data.GetNewtonRaphsonData(iteration);
+
+            var v = Checker.EQ(nrRes.ADelta, JRes.ADelta, 0.0001);
+            c &= v.Valid;
+
+            v = Checker.EQ(nrRes.VDelta, JRes.VDelta, 0.0001);
+            c &= v.Valid;
 
             return c;
         }

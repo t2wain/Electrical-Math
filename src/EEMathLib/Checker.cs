@@ -28,7 +28,20 @@ namespace EEMathLib
         {
             var c = true;
             var lst = new List<(int Row, int Col)>();
-            foreach(var row in Enumerable.Range(0, mx.RowCount))
+
+            {
+                var v = mx.RowCount == res.RowCount;
+                c &= v;
+                if (!v)
+                    lst.Add((-1, 0));
+
+                v = mx.ColumnCount == res.ColumnCount;
+                c &= v;
+                if (!c)
+                    lst.Add((0, -1));
+            }
+
+            foreach (var row in Enumerable.Range(0, mx.RowCount))
                 foreach(var col in Enumerable.Range(0,mx.ColumnCount))
                 {
                     var j = mx[row, col];
@@ -41,8 +54,11 @@ namespace EEMathLib
 
             foreach (var i in lst)
             {
-                var v = mx[i.Row, i.Col];
-                var r = res[i.Row, i.Col];
+                if (i.Row >= 0 && i.Col >= 0)
+                {
+                    var v = mx[i.Row, i.Col];
+                    var r = res[i.Row, i.Col];
+                }
             }
 
             return (c, lst);
@@ -53,6 +69,19 @@ namespace EEMathLib
         {
             var c = true;
             var lst = new List<(int Row, int Col)>();
+
+            {
+                var v = mx.RowCount == res.RowCount;
+                c &= v;
+                if (!v)
+                    lst.Add((-1, 0));
+
+                v = mx.ColumnCount == res.ColumnCount;
+                c &= v;
+                if (!c)
+                    lst.Add((0, -1));
+            }
+
             foreach(var row in Enumerable.Range(0, mx.RowCount))
                 foreach(var col in Enumerable.Range(0,mx.ColumnCount))
                 {
@@ -67,12 +96,47 @@ namespace EEMathLib
 
             foreach (var i in lst)
             {
-                var v = mx[i.Row, i.Col];
-                var r = res[i.Row, i.Col];
+                if (i.Row >= 0 && i.Col >= 0)
+                {
+                    var v = mx[i.Row, i.Col];
+                    var r = res[i.Row, i.Col];
+                }
             }
 
             return (c, lst);
-        }   
+        }
+
+        public static (bool Valid, List<int> MisMatch) EQ(
+            IEnumerable<double> vals, IEnumerable<double> res, double err)
+        {
+            var lst = new List<int>();
+            var c = true;
+
+            {
+                var v = vals.Count() == res.Count();
+                c &= v;
+                if (!v)
+                    lst.Add(-1);
+            }
+
+            var q1 = vals
+                .Zip(Enumerable.Range(0, vals.Count()), (val, idx) => (val, idx))
+                .Zip(res, (d, r) =>
+                {
+                    var v = EQ(d.val, r, err);
+                    if (!v)
+                        lst.Add(d.idx);
+                    return v;
+                })
+                .ToList();
+
+            {
+                var v = !q1.Any(d => !d);
+                c &= v;
+            }
+
+            return (c, lst);
+        }
 
     }
 }

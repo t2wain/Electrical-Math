@@ -17,136 +17,146 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     /// </summary>
     public static class LFNewtonRaphson
     {
+        #region Solve
 
         /// <summary>
-        /// Calculate load flow
+        /// Calculate ewton-Raphson load flow
         /// </summary>
         public static Result<BU> Solve(EENetwork network,
             double threshold = 0.015, int maxIteration = 20) =>
             Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration);
 
         /// <summary>
-        /// Calculate load flow
+        /// Calculate Newton-Raphson load flow
         /// </summary>
         public static Result<BU> Solve(BU buses, MC YMatrix,
             double threshold = 0.015, int maxIteration = 20)
         {
             var Y = YMatrix;
 
-            #region Iteration
-
-            var isFound = false;
             var i = 0;
             // min error found during iterations
-            var lastMinErr = Double.MaxValue; 
+            var lastMinErr = Double.MaxValue;
+            NRResult res = null;
             while (i++ < maxIteration)
             {
-                // Step 1
-                var nrBuses = JC.ReIndexBusPQ(buses);
 
-                // Step 2
-                var mxPQdelta = CalcDeltaPQ(Y, nrBuses); // delta P and Q
-
-                #region Check for solution and divergence
-
-                // Step 3
-                var err = mxPQdelta
-                    .ToColumnMajorArray()
-                    .Select(v => Math.Abs(v))
-                    .Max();
-                if (err <= threshold) // check for solution
-                {
-                    isFound = true;
+                res = Iterate(buses, YMatrix, threshold);
+                res.Iteration = i;
+                if (res.IsSolution)
                     break;
-                }
                 else if (i == 1 || i % 5 == 0) // check for divergence
                 {
-                    //if (err > lastMinErr)
-                    //    return new Result<BU>
-                    //    {
-                    //        Data = buses,
-                    //        IterationStop = i,
-                    //        Error = ErrorEnum.Divergence,
-                    //        ErrorMessage = "Divergence detected during Gauss-Siedel iterations."
-                    //    };
-                    //else lastMinErr = Math.Min(lastMinErr, err);
-                    lastMinErr = Math.Min(lastMinErr, err);
-                }
-
-                #endregion
-
-                // Step 4
-                var J = JC.CreateJMatrix(Y, nrBuses);
-
-                // Step 5
-                var mxAVdelta = J.Solve(mxPQdelta); // delta A and V
-
-                #region Update bus PQ and VA
-
-                // Step 6
-                foreach (var b in nrBuses.Buses)
-                {
-                    var ik = b.Pidx;
-                    var pcnt = nrBuses.J1Size.Row;
-
-                    var dA = mxAVdelta[b.Aidx, 0];
-                    if (b.BusData.BusType == BusTypeEnum.PQ)
-                    {
-                        var dV = mxAVdelta[b.Vidx + pcnt, 0];
-                        var dAV = Complex.FromPolarCoordinates(dV, dA);
-                        var vk = b.BusVoltage + dAV;
-                        b.BusVoltage = vk;
-                        b.UpdateVErr(dAV.Magnitude, i);
-                        b.UpdateAErr(dAV.Phase, i);
-                    }
-
-                    else if (b.BusData.BusType == BusTypeEnum.PV)
-                    {
-                        var dP = mxPQdelta[b.Pidx, 0];
-                        var dQ = mxPQdelta[b.Qidx + pcnt, 0];
-                        var dPQ = new Complex(dP, dQ);
-                        var sk = b.Sbus + dPQ;
-                        var (snxt, bt) = LFC.CalcMaxQk(b, sk);
-
-                        b.Sbus = snxt;
-                        b.BusType = bt;
-                        if (bt == BusTypeEnum.PQ)
+                    if (res.MaxErr > lastMinErr)
+                        return new Result<BU>
                         {
-                            var dV = mxAVdelta[b.Vidx + pcnt, 0];
-                            var dAV = Complex.FromPolarCoordinates(dV, dA);
-                            var vk = b.BusVoltage + dAV;
-                            b.BusVoltage = vk;
-                            b.UpdateVErr(dAV.Magnitude, i);
-                            b.UpdateAErr(dAV.Phase, i);
-                        }
-                        else
-                        {
-                            var phase = b.BusVoltage.Phase + dA;
-                            b.BusVoltage = Complex.FromPolarCoordinates(b.BusData.Voltage, phase);
-                            b.UpdateVErr(0, i);
-                            b.UpdateAErr(dA, i);
-                        }
-                    }
+                            Data = buses,
+                            IterationStop = i,
+                            Error = ErrorEnum.Divergence,
+                            ErrorMessage = "Divergence detected during Gauss-Siedel iterations."
+                        };
+                    else lastMinErr = Math.Min(lastMinErr, res.MaxErr);
                 }
-
-                #endregion
 
             }
 
-            #endregion
-
             // Calculate Pk, Qk for slack bus
-            var slackBus = buses.FirstOrDefault(b => b.BusType == BusTypeEnum.Slack);
-            slackBus.Sbus = LFC.CalcPower(slackBus, Y, buses);
+            res.NRBuses.SlackBus.Sbus = LFC.CalcPower(res.NRBuses.SlackBus, Y, buses);
 
             return new Result<BU>
             {
                 Data = buses,
                 IterationStop = i,
-                Error = isFound ? ErrorEnum.NoError : ErrorEnum.MaxIteration,
-                ErrorMessage = isFound ? "" : "Maximum iterations reached without convergence."
+                Error = res.IsSolution ? ErrorEnum.NoError : ErrorEnum.MaxIteration,
+                ErrorMessage = res.IsSolution ? "" : "Maximum iterations reached without convergence."
             };
         }
+
+        /// <summary>
+        /// An iteration of Newton-Raphson load flow calculation.
+        /// </summary>
+        /// <returns>All calculated values for an iteration</returns>
+        public static NRResult Iterate(BU buses, MC YMatrix, double threshold = 0.0001)
+        {
+            var res = new NRResult();
+            var Y = YMatrix;
+
+            // Step 1
+            res.NRBuses = JC.ReIndexBusPQ(buses);
+
+            // Step 2
+            CalcDeltaPQ(Y, res.NRBuses, out NRResult temp); // delta P and Q
+            res.PQDelta = temp.PQDelta;
+            res.PCal = temp.PCal;
+            res.QCal = temp.QCal;
+                                                     
+            res.MaxErr = res.PQDelta
+                .ToColumnMajorArray()
+                .Select(v => Math.Abs(v))
+                .Max();
+
+            if (res.MaxErr <= threshold)
+            {
+                res.IsSolution = true;
+                return res;
+            }
+
+            // Step 3
+            var pcnt = res.NRBuses.J1Size.Row;
+            foreach(var b in res.NRBuses.AllPVBuses)
+            {
+                var dP = res.PQDelta[b.Pidx, 0];
+                var dQ = res.PQDelta[b.Qidx + pcnt, 0];
+                var dPQ = new Complex(dP, dQ);
+                var sk = b.Sbus + dPQ;
+                var (snxt, bt) = LFC.CalcMaxQk(b, sk);
+                b.Sbus = snxt;
+                b.BusType = bt;
+            }
+
+            // Step 4
+            res.NRBuses = JC.ReIndexBusPQ(buses);
+
+            // Step 5
+            res.JMatrix = JC.CreateJMatrix(Y, res.NRBuses);
+
+            // Step 6
+            res.AVDelta = res.JMatrix.Solve(res.PQDelta); // delta A and V
+            res.ADelta = new double[res.NRBuses.J1Size.Row];
+            res.VDelta = new double[res.NRBuses.J3Size.Row];
+
+            #region Update bus PQ and VA
+
+            // Step 7
+            pcnt = res.NRBuses.J1Size.Row;
+            foreach (var b in res.NRBuses.Buses)
+            {
+                var ik = b.Pidx;
+                var dA = res.AVDelta[b.Aidx, 0];
+                res.ADelta[b.Aidx] = dA;
+
+                if (b.BusType == BusTypeEnum.PQ)
+                {
+                    var dV = res.AVDelta[b.Vidx + pcnt, 0];
+                    res.VDelta[b.Vidx] = dV;
+                    var dAV = Complex.FromPolarCoordinates(dV, dA);
+                    var vk = b.BusVoltage + dAV;
+                    b.BusVoltage = vk;
+                }
+
+                else if (b.BusType == BusTypeEnum.PV)
+                {
+                    var phase = b.BusVoltage.Phase + dA;
+                    b.BusVoltage = Complex.FromPolarCoordinates(b.BusData.Voltage, phase);
+                }
+            }
+
+            #endregion
+
+            return res;
+        }
+
+        #endregion
 
         #region Calculate
 
@@ -170,23 +180,39 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         public static MD CalcDeltaPQ(MC Y, JC.NRBuses nrBuses)
         {
+            CalcDeltaPQ(Y, nrBuses, out NRResult res);
+            return res.PQDelta;
+        }
+
+        public static void CalcDeltaPQ(MC Y, JC.NRBuses nrBuses, out NRResult nrRes)
+        {
+            var res = new NRResult
+            {
+                PCal = new double[nrBuses.Buses.Count()],
+                QCal = new double[nrBuses.PQBuses.Count()]
+            };
+
             var buses = nrBuses.Buses;
             var N = nrBuses.J1Size.Row;
             var mx = MD.Build.Dense(nrBuses.JSize.Row, 1, 0.0);
             foreach (var bk in buses)
             {
                 var sk = LFC.CalcPower(bk, Y, nrBuses.AllBuses);
+                res.PCal[bk.Pidx] = sk.Real;
 
                 var pdk = bk.Sbus.Real - sk.Real;
                 mx[bk.Pidx, 0] = pdk; // delta P
 
                 if (bk.BusType == BusTypeEnum.PQ)
                 {
+                    res.QCal[bk.Qidx] = sk.Imaginary;
                     var qdk = bk.Sbus.Imaginary - sk.Imaginary;
                     mx[bk.Qidx + N, 0] = qdk; // delta Q
                 }
             }
-            return mx;
+
+            res.PQDelta = mx;
+            nrRes = res;
         }
 
         #endregion

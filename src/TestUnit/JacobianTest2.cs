@@ -15,38 +15,12 @@ namespace TestUnit
             _data = ctx.LoadFlowData2;
         }
 
-        #region J1, J2, J3, J4
-
         [Fact]
-        public void Calc_J1()
+        public void Calc_J1_J2_J3_J4()
         {
-            var c = NRExample.Calc_JMatrix(_data, true, false, false, false, 1);
+            var c = NRExample.Calc_J1_J2_J3_J4(_data, true, true, true, true, 1);
             Assert.True(c, "NR JMatrix calculation failed");
         }
-
-        [Fact]
-        public void Calc_J2()
-        {
-            var c = NRExample.Calc_JMatrix(_data, false, true, false, false, 1);
-            Assert.True(c, "NR JMatrix calculation failed");
-        }
-
-        [Fact]
-        public void Calc_J3()
-        {
-            var c = NRExample.Calc_JMatrix(_data, false, false, true, false, 1);
-            Assert.True(c, "NR JMatrix calculation failed");
-        }
-
-        [Fact]
-        public void Calc_J4()
-        {
-            var c = NRExample.Calc_JMatrix(_data, false, false, false, true, 1);
-            Assert.True(c, "NR JMatrix calculation failed");
-        }
-
-        #endregion
-
         
         [Fact]
         public void Calc_Jkk()
@@ -59,6 +33,13 @@ namespace TestUnit
         public void Calc_Jkn()
         {
             var c = NRExample.Calc_Jkn(_data, true, true, true, true, 1);
+            Assert.True(c, "NR JMatrix calculation failed");
+        }
+
+        [Fact]
+        public void Calc_JMatrix()
+        {
+            var c = NRExample.Calc_JMatrix(_data, 1);
             Assert.True(c, "NR JMatrix calculation failed");
         }
 
