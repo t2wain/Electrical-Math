@@ -12,6 +12,8 @@ namespace TestUnit
             _data = ctx.LoadFlowData2;
         }
 
+        #region PQ
+
         [Fact]
         public void Calc_PQ_Iteration_0()
         {
@@ -20,11 +22,40 @@ namespace TestUnit
         }
 
         [Fact]
-        public void Calc_DeltaPQ_Iteration_0()
+        public void Calc_PQ_Iteration_1()
         {
-            var c = NRExample.Calc_DeltaPQ(_data, 0);
+            var c = NRExample.Calc_PQ(_data, 1);
             Assert.True(c);
         }
+
+        #endregion
+
+        #region Iteration
+
+        [Fact]
+        public void Calc_Iteration_1()
+        {
+            var c = NRExample.LFSolve(_data, 1);
+            Assert.True(c);
+        }
+
+        [Fact]
+        public void Calc_Iteration_2()
+        {
+            var c = NRExample.LFSolve(_data, 2);
+            Assert.True(c);
+        }
+
+        [Fact]
+        public void Calc_Iteration_3()
+        {
+            var c = NRExample.LFSolve(_data, 3);
+            Assert.True(c);
+        }
+
+        #endregion
+
+        #region Load flow
 
         [Fact]
         public void Calc_LoadFlow()
@@ -33,12 +64,7 @@ namespace TestUnit
             Assert.True(c);
         }
 
-        [Fact]
-        public void Iterate_LoadFlow()
-        {
-            var c = NRExample.LFIterate3times(_data);
-            Assert.True(c);
-        }
+        #endregion
 
     }
 }

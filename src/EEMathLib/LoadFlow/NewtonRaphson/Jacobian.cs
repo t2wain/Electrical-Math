@@ -2,6 +2,7 @@
 using MathNet.Numerics;
 using System;
 using System.Linq;
+using static EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
@@ -22,15 +23,22 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         public class NRBuses
         {
             /// <summary>
-            /// All buses in the network including slack bus
+            /// All buses from input data including slack bus
             /// </summary>
             public BU AllBuses { get; set; }
+
+            /// <summary>
+            /// All PV buses based on input data
+            /// </summary>
             public BU AllPVBuses { get; set; }
 
+            /// <summary>
+            /// Designated slack bus from input data
+            /// </summary>
             public BusResult SlackBus { get; set; }
 
             /// <summary>
-            /// Include al PQ buses. 
+            /// All PQ buses in the current iteration. 
             /// Calculate V and A, given P and Q
             /// </summary>
             public BU PQBuses { get; set; }
@@ -141,11 +149,11 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                     var vn = bn.BusVoltage;
                     var ykn = Y[jk, bn.BusData.BusIndex];
                     var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = ykn.Magnitude * vn.Magnitude * Math.Sign(a);
+                    var s = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Sign(a);
                     return s;
                 })
                 .Aggregate((a, b) => a + b);
-            return -vk.Magnitude * skn;
+            return -skn;
         }
 
         /// <summary>
@@ -155,8 +163,10 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         public static double CalcJ1kn(BusResult bk, BusResult bn, MC Y)
         {
             var vk = bk.BusVoltage;
+            var vn = bn.BusVoltage;
             var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-            var jkn = (vk * ykn.Conjugate() * bn.BusVoltage.Conjugate()).Imaginary;
+            var a = vk.Phase - ykn.Phase - vn.Phase;
+            var jkn = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Sign(a);
             return jkn;
         }
 
@@ -419,8 +429,13 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             var J2 = CreateJ2(Y, nrBuses);
             var J3 = CreateJ3(Y, nrBuses);
             var J4 = CreateJ4(Y, nrBuses);
+            return CreateJMatrix(J1, J2, J3, J4);
+        }
 
-            var J = MD.Build.Dense(nrBuses.JSize.Row, nrBuses.JSize.Col);
+        public static MD CreateJMatrix(MD J1, MD J2, MD J3, MD J4)
+        {
+            //var J = MD.Build.Dense(nrBuses.JSize.Row, nrBuses.JSize.Col);
+            var J = MD.Build.Dense(J1.RowCount + J3.RowCount, J1.ColumnCount + J2.ColumnCount);
             J.SetSubMatrix(0, 0, J1);
             J.SetSubMatrix(0, J1.ColumnCount, J2);
             J.SetSubMatrix(J1.RowCount, 0, J3);

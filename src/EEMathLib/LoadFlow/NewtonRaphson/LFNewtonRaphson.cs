@@ -82,13 +82,11 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             var Y = YMatrix;
 
             // Step 1
+            // Determine classification of each bus
             res.NRBuses = JC.ReIndexBusPQ(buses);
 
             // Step 2
-            CalcDeltaPQ(Y, res.NRBuses, out NRResult temp); // delta P and Q
-            res.PQDelta = temp.PQDelta;
-            res.PCal = temp.PCal;
-            res.QCal = temp.QCal;
+            CalcDeltaPQ(Y, res); // delta P and Q
                                                      
             res.MaxErr = res.PQDelta
                 .ToColumnMajorArray()
@@ -102,56 +100,22 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
 
             // Step 3
-            var pcnt = res.NRBuses.J1Size.Row;
-            foreach(var b in res.NRBuses.AllPVBuses)
-            {
-                var dP = res.PQDelta[b.Pidx, 0];
-                var dQ = res.PQDelta[b.Qidx + pcnt, 0];
-                var dPQ = new Complex(dP, dQ);
-                var sk = b.Sbus + dPQ;
-                var (snxt, bt) = LFC.CalcMaxQk(b, sk);
-                b.Sbus = snxt;
-                b.BusType = bt;
-            }
+            UpdatePVBusStatus(res);
 
             // Step 4
-            res.NRBuses = JC.ReIndexBusPQ(buses);
+            // Determine classification of each bus
+            // PV bus classification might have changed in step 3
+            res.NRBuses = JC.ReIndexBusPQ(buses); 
 
             // Step 5
+            // Calculate Jacobian matrix
             res.JMatrix = JC.CreateJMatrix(Y, res.NRBuses);
 
             // Step 6
-            res.AVDelta = res.JMatrix.Solve(res.PQDelta); // delta A and V
-            res.ADelta = new double[res.NRBuses.J1Size.Row];
-            res.VDelta = new double[res.NRBuses.J3Size.Row];
-
-            #region Update bus PQ and VA
+            CalcAVDelta(res);
 
             // Step 7
-            pcnt = res.NRBuses.J1Size.Row;
-            foreach (var b in res.NRBuses.Buses)
-            {
-                var ik = b.Pidx;
-                var dA = res.AVDelta[b.Aidx, 0];
-                res.ADelta[b.Aidx] = dA;
-
-                if (b.BusType == BusTypeEnum.PQ)
-                {
-                    var dV = res.AVDelta[b.Vidx + pcnt, 0];
-                    res.VDelta[b.Vidx] = dV;
-                    var dAV = Complex.FromPolarCoordinates(dV, dA);
-                    var vk = b.BusVoltage + dAV;
-                    b.BusVoltage = vk;
-                }
-
-                else if (b.BusType == BusTypeEnum.PV)
-                {
-                    var phase = b.BusVoltage.Phase + dA;
-                    b.BusVoltage = Complex.FromPolarCoordinates(b.BusData.Voltage, phase);
-                }
-            }
-
-            #endregion
+            UpdateBusAV(res);
 
             return res;
         }
@@ -178,41 +142,149 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 })
                 .ToList();
 
-        public static MD CalcDeltaPQ(MC Y, JC.NRBuses nrBuses)
+        public static NRResult CalcDeltaPQ(MC Y, JC.NRBuses nrBuses)
         {
-            CalcDeltaPQ(Y, nrBuses, out NRResult res);
-            return res.PQDelta;
+            var nrRes = new NRResult
+            {
+                NRBuses = nrBuses,
+            };
+            CalcDeltaPQ(Y, nrRes);
+            return nrRes;
         }
 
-        public static void CalcDeltaPQ(MC Y, JC.NRBuses nrBuses, out NRResult nrRes)
+        public static void CalcDeltaPQ(MC Y, NRResult nrRes)
         {
-            var res = new NRResult
-            {
-                PCal = new double[nrBuses.Buses.Count()],
-                QCal = new double[nrBuses.PQBuses.Count()]
-            };
+            var nrBuses = nrRes.NRBuses;
+            nrRes.PCal = new double[nrBuses.Buses.Count()];
+            nrRes.QCal = new double[nrBuses.PQBuses.Count()];
 
             var buses = nrBuses.Buses;
-            var N = nrBuses.J1Size.Row;
+            var pcnt = nrBuses.J1Size.Row;
             var mx = MD.Build.Dense(nrBuses.JSize.Row, 1, 0.0);
+            nrRes.PQDelta = mx;
             foreach (var bk in buses)
             {
                 var sk = LFC.CalcPower(bk, Y, nrBuses.AllBuses);
-                res.PCal[bk.Pidx] = sk.Real;
+                nrRes.PCal[bk.Pidx] = sk.Real; // save dP
 
                 var pdk = bk.Sbus.Real - sk.Real;
-                mx[bk.Pidx, 0] = pdk; // delta P
+                mx[bk.Pidx, 0] = pdk; // save dP to DeltaPQ
 
                 if (bk.BusType == BusTypeEnum.PQ)
                 {
-                    res.QCal[bk.Qidx] = sk.Imaginary;
+                    nrRes.QCal[bk.Qidx] = sk.Imaginary; // save dQ calc
                     var qdk = bk.Sbus.Imaginary - sk.Imaginary;
-                    mx[bk.Qidx + N, 0] = qdk; // delta Q
+                    mx[bk.Qidx + pcnt, 0] = qdk; // save dQ to DeltaPQ
                 }
             }
+        }
 
-            res.PQDelta = mx;
-            nrRes = res;
+        public static void UpdatePVBusStatus(JC.NRBuses nrBuses, MD mxPQDelta)
+        {
+            var nrRes = new NRResult
+            {
+                NRBuses = nrBuses,
+                PQDelta = mxPQDelta
+            };
+            UpdatePVBusStatus(nrRes);
+        }
+
+        public static void UpdatePVBusStatus(NRResult nrRes)
+        {
+            var pcnt = nrRes.NRBuses.J1Size.Row;
+            foreach (var b in nrRes.NRBuses.AllPVBuses)
+            {
+                var dP = nrRes.PQDelta[b.Pidx, 0];
+                var dQ = nrRes.PQDelta[b.Qidx + pcnt, 0];
+                var dPQ = new Complex(dP, dQ);
+                var sk = b.Sbus + dPQ;
+                var (snxt, bt) = LFC.CalcMaxQk(b, sk);
+                b.Sbus = snxt;
+                // Determine if PV bus should be
+                // switched to PQ bus or back to PV bus
+                b.BusType = bt;
+
+            }
+        }
+
+        public static void CalcAVDelta(MD JMatrix, JC.NRBuses nrBuses, MD mxPQDelta)
+        {
+            var nrRes = new NRResult
+            {
+                NRBuses = nrBuses,
+                PQDelta = mxPQDelta,
+                JMatrix = JMatrix
+            };
+            CalcAVDelta(nrRes);
+        }
+
+        public static void CalcAVDelta(NRResult nrRes)
+        {
+            nrRes.AVDelta = nrRes.JMatrix.Solve(nrRes.PQDelta); // delta A and V
+            var acnt = nrRes.NRBuses.J1Size.Row;
+            nrRes.ADelta = new double[acnt];
+            nrRes.VDelta = new double[nrRes.NRBuses.J3Size.Row];
+            foreach (var b in nrRes.NRBuses.Buses)
+            {
+                var ik = b.Pidx;
+                var dA = nrRes.AVDelta[b.Aidx, 0];
+                nrRes.ADelta[b.Aidx] = dA; // save dA calculation
+
+                if (b.BusType == BusTypeEnum.PQ)
+                {
+                    var dV = nrRes.AVDelta[b.Vidx + acnt, 0];
+                    nrRes.VDelta[b.Vidx] = dV; // save dV calculation
+                }
+            }
+        }
+
+        public static void UpdateBusAV(JC.NRBuses nrBuses, MD mxAVDelta)
+        {
+            var nrRes = new NRResult
+            {
+                NRBuses = nrBuses,
+                AVDelta = mxAVDelta
+            };
+            UpdateBusAV(nrRes);
+        }
+
+        public static void UpdateBusAV(NRResult nrRes)
+        {
+            var acnt = nrRes.NRBuses.J1Size.Row;
+            nrRes.ABus = new double[nrRes.NRBuses.AllBuses.Count()];
+            nrRes.VBus = new double[nrRes.NRBuses.AllBuses.Count()];
+
+            // slack bus
+            var sb = nrRes.NRBuses.SlackBus;
+            nrRes.ABus[sb.BusData.BusIndex] = sb.BusVoltage.Phase;
+            nrRes.VBus[sb.BusData.BusIndex] = sb.BusVoltage.Magnitude;
+
+            foreach (var b in nrRes.NRBuses.Buses)
+            {
+                var ik = b.Pidx;
+                var dA = nrRes.AVDelta[b.Aidx, 0];
+
+                // update V and A
+                if (b.BusType == BusTypeEnum.PQ)
+                {
+                    var dV = nrRes.AVDelta[b.Vidx + acnt, 0];
+                    var vk = Complex.FromPolarCoordinates(
+                        b.BusVoltage.Magnitude + dV, 
+                        b.BusVoltage.Phase + dA);
+                    nrRes.ABus[b.BusData.BusIndex] = vk.Phase;
+                    nrRes.VBus[b.BusData.BusIndex] = vk.Magnitude;
+                    b.BusVoltage = vk; // update voltage
+                }
+
+                // update A only
+                else if (b.BusType == BusTypeEnum.PV)
+                {
+                    var phase = b.BusVoltage.Phase + dA;
+                    b.BusVoltage = Complex.FromPolarCoordinates(b.BusData.Voltage, phase); // update Angle
+                    nrRes.ABus[b.BusData.BusIndex] = b.BusVoltage.Phase;
+                    nrRes.VBus[b.BusData.BusIndex] = b.BusVoltage.Magnitude;
+                }
+            }
         }
 
         #endregion

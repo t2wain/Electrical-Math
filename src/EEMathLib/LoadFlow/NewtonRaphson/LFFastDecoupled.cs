@@ -40,7 +40,8 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             {
                 #region Calculate delta PQ and VA
 
-                var mxPQdelta = LFNR.CalcDeltaPQ(Y, nrBuses); // delta P and Q
+                var nrRes = LFNR.CalcDeltaPQ(Y, nrBuses);
+                var mxPQdelta = nrRes.PQDelta; // delta P and Q
                 var J1 = JC.CreateJ1(Y, nrBuses); // P/A derivative Jacobian matrix
                 var J4 = JC.CreateJ4(Y, nrBuses); // Q/V derivative Jacobian matrix
 

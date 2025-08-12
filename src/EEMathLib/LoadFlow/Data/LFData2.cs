@@ -175,7 +175,7 @@ namespace EEMathLib.LoadFlow.Data
         {
             Iteration = 1;
             JacobianData = new Jacobian();
-            PCal = new double[] { 0.52023, 0.9293, -1.0413, -0.8128 };
+            PCal = new double[] { 0.5023, 0.9293, -1.0413, -0.8128 };
             QCal = new double[] { -0.5158, 0.3472 };
             ADelta = new double[] { 0.0331, -0.0090, -0.1275, -0.0799 };
             VDelta = new double[] { -0.0783, -0.0475 };
