@@ -40,24 +40,27 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             NRResult res = null;
             while (i++ < maxIteration)
             {
-
                 res = Iterate(buses, YMatrix, threshold);
-                res.Iteration = i;
                 if (res.IsSolution)
+                {
+                    // solution is checked before
+                    // calculating new result
+                    res.Iteration = i - 1;
                     break;
+                }
                 else if (i == 1 || i % 5 == 0) // check for divergence
                 {
                     if (res.MaxErr > lastMinErr)
                         return new Result<BU>
                         {
                             Data = buses,
-                            IterationStop = i,
+                            IterationStop = res.Iteration,
                             Error = ErrorEnum.Divergence,
                             ErrorMessage = "Divergence detected during Gauss-Siedel iterations."
                         };
                     else lastMinErr = Math.Min(lastMinErr, res.MaxErr);
                 }
-
+                res.Iteration = i; // iteration completed without solution
             }
 
             // Calculate Pk, Qk for slack bus
@@ -66,7 +69,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return new Result<BU>
             {
                 Data = buses,
-                IterationStop = i,
+                IterationStop = res.Iteration,
                 Error = res.IsSolution ? ErrorEnum.NoError : ErrorEnum.MaxIteration,
                 ErrorMessage = res.IsSolution ? "" : "Maximum iterations reached without convergence."
             };

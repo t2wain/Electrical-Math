@@ -17,14 +17,14 @@ namespace TestUnit
         [Fact]
         public void Calc_PQ_Iteration_0()
         {
-            var c = NRExample.Calc_PQ(_data, 0);
+            var c = NRExample.Calc_Iteration(_data, 0);
             Assert.True(c);
         }
 
         [Fact]
         public void Calc_PQ_Iteration_1()
         {
-            var c = NRExample.Calc_PQ(_data, 1);
+            var c = NRExample.Calc_Iteration(_data, 1);
             Assert.True(c);
         }
 
@@ -35,21 +35,21 @@ namespace TestUnit
         [Fact]
         public void Calc_Iteration_1()
         {
-            var c = NRExample.LFSolve(_data, 1);
+            var c = NRExample.Calc_Iteration(_data, 1);
             Assert.True(c);
         }
 
         [Fact]
         public void Calc_Iteration_2()
         {
-            var c = NRExample.LFSolve(_data, 2);
+            var c = NRExample.Calc_Iteration(_data, 2);
             Assert.True(c);
         }
 
         [Fact]
         public void Calc_Iteration_3()
         {
-            var c = NRExample.LFSolve(_data, 3);
+            var c = NRExample.Calc_Iteration(_data, 3);
             Assert.True(c);
         }
 
