@@ -3,7 +3,6 @@ using EEMathLib.MatrixMath;
 using System.Linq;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
-using LFFD = EEMathLib.LoadFlow.NewtonRaphson.LFFastDecoupled;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
@@ -165,7 +164,8 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             var nw = data.CreateNetwork();
             var threshold = 0.001;
 
-            var res = LFNR.Solve(nw, threshold, 50);
+            var solver = new LFNR();
+            var res = solver.Solve(nw, threshold, 50);
 
             return !res.IsError;
         }
@@ -176,7 +176,8 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             var nw = data.CreateNetwork();
             var threshold = 0.001;
 
-            var res = LFFD.Solve(nw, threshold, 50);
+            var solver = new LFFastDecoupled();
+            var res = solver.Solve(nw, threshold, 50);
 
             return !res.IsError;
         }
@@ -187,7 +188,8 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             var nw = data.CreateNetwork();
             var threshold = 0.001;
 
-            var res = LFFD.Solve(nw, threshold, 50, true);
+            var solver = new LFFastDecoupled(true);
+            var res = solver.Solve(nw, threshold, 50);
 
             return !res.IsError;
         }
@@ -196,8 +198,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         {
 
             var nw = data.CreateNetwork();
-            var buses = LFDC.Solve(nw);
-            return true;
+            var solver = new LFDC();
+            var res = solver.Solve(nw);
+            return !res.IsError;
         }
 
 

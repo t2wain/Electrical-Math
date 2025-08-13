@@ -1,8 +1,6 @@
 ﻿using EEMathLib.LoadFlow.Data;
-using MathNet.Numerics;
 using System;
 using System.Linq;
-using static EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;

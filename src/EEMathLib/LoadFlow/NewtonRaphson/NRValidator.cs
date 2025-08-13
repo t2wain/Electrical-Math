@@ -4,7 +4,7 @@ using MathNet.Numerics.LinearAlgebra;
 using System;
 using System.Linq;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
-using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
+using LFNR = EEMathLib.LoadFlow.NewtonRaphson.NewtonRaphsonBase;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
 
@@ -27,8 +27,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// <param name="steps">The number of sequential calculation steps to be executed 
         /// then exit the iteration. The remain steps will be skipped.</param>
         /// <returns>All the results of completed calculation steps.</returns>
-        public static NRResult LFIterate(MC YMatrix, NRResult data, int steps, double threshold = 0.0001)
+        internal static NRResult LFIterate(MC YMatrix, NRResult data, int steps, double threshold = 0.0001)
         {
+            var solver = new LFNewtonRaphson();
             var res = new NRResult();
             res.Iteration = data.Iteration;
             var Y = YMatrix;
@@ -87,7 +88,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 return res;
 
             // Step 6
-            LFNR.CalcAVDelta(res);
+            solver.CalcAVDelta(res);
 
             if (steps <= 6)
                 return res;
@@ -102,7 +103,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         #region Validate
 
-        public static bool ValidateIteration(NRResult res, ILFData data)
+        internal static bool ValidateIteration(NRResult res, ILFData data)
         {
             var c = true;
             var v = true;
@@ -135,7 +136,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return c;
         }
 
-        public static bool Validate_JMatrix(NRResult nrRes, ILFData data)
+        internal static bool Validate_JMatrix(NRResult nrRes, ILFData data)
         {
             var c = true;
 
@@ -157,7 +158,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return c;
         }
 
-        public static bool Validate_JMatrix(Matrix<double> J1, Matrix<double> J2,
+        internal static bool Validate_JMatrix(Matrix<double> J1, Matrix<double> J2,
             Matrix<double> J3, Matrix<double> J4, ILFData data, int iteration)
         {
             var err = 0.001;
@@ -196,7 +197,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         }
 
-        public static bool Validate_PQDelta(Matrix<double> mxPQDelta, ILFData data, int iteration)
+        internal static bool Validate_PQDelta(Matrix<double> mxPQDelta, ILFData data, int iteration)
         {
             var nrData = data.GetNewtonRaphsonData(iteration);
             var c = true;
@@ -209,7 +210,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return c;
         }
 
-        public static bool Validate_PQCalc(NRResult nrRes, ILFData data)
+        internal static bool Validate_PQCalc(NRResult nrRes, ILFData data)
         {
             var c = true;
             var JRes = data.GetNewtonRaphsonData(nrRes.Iteration);
@@ -223,7 +224,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return c;
         }
 
-        public static bool Validate_AVDelta(NRResult nrRes, ILFData data)
+        internal static bool Validate_AVDelta(NRResult nrRes, ILFData data)
         {
             var c = true;
             var JRes = data.GetNewtonRaphsonData(nrRes.Iteration);
@@ -237,7 +238,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return c;
         }
 
-        public static bool Validate_AVBus(NRResult nrRes, ILFData data)
+        internal static bool Validate_AVBus(NRResult nrRes, ILFData data)
         {
             var c = true;
             var JRes = data.GetNewtonRaphsonData(nrRes.Iteration);

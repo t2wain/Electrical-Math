@@ -1,8 +1,8 @@
-﻿using System.Linq;
+﻿using EEMathLib.DTO;
+using System.Linq;
 using System.Numerics;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
-using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
 
@@ -11,12 +11,10 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     /// <summary>
     /// DC-like version of Newton-Raphson load flow algorithm
     /// </summary>
-    public static class LFDC
+    public class LFDC : NewtonRaphsonBase
     {
-        public static BU Solve(EENetwork network) => 
-            Solve(LFNR.Initialize(network.Buses), network.YMatrix);
-
-        public static BU Solve(BU buses, MC YMatrix)
+        override protected Result<BU> Solve(BU buses, MC YMatrix,
+            double threshold = double.NaN, int maxIteration = 1)
         {
             var res = new NRResult();
             var Y = YMatrix;
@@ -46,7 +44,13 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 b.BusVoltage = Complex.FromPolarCoordinates(1.0, phase);
             }
 
-            return res.NRBuses.AllBuses;
+            //return res.NRBuses.AllBuses;
+            return new Result<BU>
+            {
+                Data = buses,
+                IterationStop = 1,
+                Error = ErrorEnum.NoError,
+            };
         }
     }
 }
