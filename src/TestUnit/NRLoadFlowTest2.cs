@@ -64,6 +64,27 @@ namespace TestUnit
             Assert.True(c);
         }
 
+        [Fact]
+        public void Calc_FastDecoupled_LoadFlow()
+        {
+            var c = NRExample.LFSolve_FastDecoupled(_data);
+            Assert.True(c);
+        }
+
+        [Fact]
+        public void Calc_FastDecoupled_LoadFlow_JMatrix_Once()
+        {
+            var c = NRExample.LFSolve_FastDecoupled_JMatrix_Once(_data);
+            Assert.True(c);
+        }
+
+        [Fact]
+        public void Calc_FastDecoupled_DCLike_LoadFlow()
+        {
+            var c = NRExample.LFSolve_DCLike(_data);
+            Assert.True(c);
+        }
+
         #endregion
 
     }

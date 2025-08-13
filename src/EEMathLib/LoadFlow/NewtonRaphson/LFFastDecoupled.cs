@@ -1,12 +1,11 @@
 ﻿using EEMathLib.DTO;
-using EEMathLib.LoadFlow.Data;
-using System.Linq;
-using System.Numerics;
+using MathNet.Numerics.LinearAlgebra;
+using System;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
-using LFC = EEMathLib.LoadFlow.LFCommon;
-using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
-using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
+using LFC = EEMathLib.LoadFlow.LFCommon;
+using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
+using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
@@ -16,167 +15,133 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     public static class LFFastDecoupled
     {
 
-        /// <summary>
-        /// Calculate load flow
-        /// </summary>
-        public static Result<BU> Solve(EENetwork network,
-            double threshold = 0.015, int maxIteration = 20, int minIteration = 5) =>
-            Solve(LFNR.Initialize(network.Buses), network.YMatrix, threshold, maxIteration, minIteration);
+        #region Solve
 
         /// <summary>
-        /// Calculate load flow
+        /// Calculate ewton-Raphson load flow
         /// </summary>
-        public static Result<BU> Solve(BU buses, MC YMatrix,
-            double threshold = 0.015, int maxIteration = 20, int minIteration = 5)
+        public static Result<BU> Solve(EENetwork network, double threshold = 0.001, 
+            int maxIteration = 20, bool calcJMatrixOnce = false) =>
+            Solve(LFNR.Initialize(network.Buses), 
+                network.YMatrix, threshold, maxIteration, calcJMatrixOnce);
+
+        /// <summary>
+        /// Calculate Newton-Raphson load flow
+        /// </summary>
+        public static Result<BU> Solve(BU buses, MC YMatrix, double threshold = 0.001, 
+            int maxIteration = 20, bool calcJMatrixOnce = false)
         {
             var Y = YMatrix;
-            var nrBuses = JC.ReIndexBusPQ(buses);
 
-            #region Iteration
-
-            var isFound = false;
             var i = 0;
+            // min error found during iterations
+            var lastMinErr = Double.MaxValue;
+            NRResult res = null;
             while (i++ < maxIteration)
             {
-                #region Calculate delta PQ and VA
-
-                var nrRes = LFNR.CalcDeltaPQ(Y, nrBuses);
-                var mxPQdelta = nrRes.PQDelta; // delta P and Q
-                var J1 = JC.CreateJ1(Y, nrBuses); // P/A derivative Jacobian matrix
-                var J4 = JC.CreateJ4(Y, nrBuses); // Q/V derivative Jacobian matrix
-
-                var mxAdelta = J1.Solve(mxPQdelta.SubMatrix(0, J1.RowCount - 1, 0, 1)); // delta A
-                var mxVdelta = J4.Solve(mxPQdelta.SubMatrix(J1.RowCount, J4.RowCount - 1, 0, 1)); // delta V
-
-                #endregion
-
-                #region Update bus PQ and VA
-
-                foreach (var b in nrBuses.Buses)
+                res = Iterate(buses, YMatrix, threshold, calcJMatrixOnce);
+                if (res.IsSolution)
                 {
-                    var ik = b.BusIndex;
-
-                    var pcnt = nrBuses.J1Size.Row;
-                    var dPQ = new Complex(mxPQdelta[ik, 0], mxPQdelta[ik + pcnt, 0]);
-                    var sk = b.Sbus + dPQ;
-                    var qgk = sk.Imaginary + b.BusData.Qload;
-
-                    var acnt = J4.RowCount;
-                    var dAV = Complex.FromPolarCoordinates(mxVdelta[ik + pcnt, 0], mxAdelta[ik, 0]);
-                    var vk = b.BusVoltage + dAV;
-
-                    if (b.BusData.BusType == BusTypeEnum.PQ)
-                    {
-                        //b.Sbus = sk;
-                        //UpdatePErr(b, dPQ.Real, i);
-                        //UpdateQErr(b, dPQ.Imaginary, i, false);
-                        b.BusVoltage = vk;
-                        b.UpdateVErr(dAV.Magnitude, i);
-                        b.UpdateAErr(dAV.Phase, i);
-                    }
-                    else if (b.BusData.BusType == BusTypeEnum.PV
-                        && qgk < b.BusData.Qmin)
-                    {
-                        b.BusType = BusTypeEnum.PQ;
-                        //b.Sbus = new Complex(b.BusData.Pgen, b.BusData.Qmin);
-                        //UpdateQErr(b, 0, i, true);
-                        b.BusVoltage = vk;
-                        b.UpdateVErr(dAV.Magnitude, i);
-                        b.UpdateAErr(dAV.Phase, i);
-                    }
-                    else if (b.BusData.BusType == BusTypeEnum.PV
-                        && qgk > b.BusData.Qmax)
-                    {
-                        b.BusType = BusTypeEnum.PQ;
-                        //b.Sbus = new Complex(b.BusData.Pgen, b.BusData.Qmax);
-                        //UpdateQErr(b, 0, i, true);
-                        b.BusVoltage = vk;
-                        b.UpdateVErr(dAV.Magnitude, i);
-                        b.UpdateAErr(dAV.Phase, i);
-                    }
-                    else if (b.BusData.BusType == BusTypeEnum.PV)
-                    {
-                        b.BusType = BusTypeEnum.PV;
-                        //b.Sbus = new Complex(b.BusData.Pgen, sk.Imaginary);
-                        //UpdateQErr(b, dPQ.Imaginary, i, false);
-                        b.BusVoltage = Complex.FromPolarCoordinates(b.BusData.Voltage, vk.Phase);
-                        b.UpdateVErr(0, i, true);
-                        b.UpdateAErr(dAV.Phase, i);
-                    }
-                }
-
-                #endregion
-
-                #region Check for solution and divergence
-
-                if (i < minIteration)
-                    continue;
-                else if (IsSolutionFound(buses, threshold))
-                {
-                    isFound = true;
+                    // solution is checked before
+                    // calculating new result
+                    res.Iteration = i - 1;
                     break;
                 }
-                else if (IsDiverged(buses, i))
+                else if (i == 1 || i % 5 == 0) // check for divergence
                 {
-                    return new Result<BU>
-                    {
-                        Data = buses,
-                        IterationStop = i,
-                        Error = ErrorEnum.Divergence,
-                        ErrorMessage = "Divergence detected during Gauss-Siedel iterations."
-                    };
+                    if (res.MaxErr > lastMinErr)
+                        return new Result<BU>
+                        {
+                            Data = buses,
+                            IterationStop = res.Iteration,
+                            Error = ErrorEnum.Divergence,
+                            ErrorMessage = "Divergence detected during Gauss-Siedel iterations."
+                        };
+                    else lastMinErr = Math.Min(lastMinErr, res.MaxErr);
                 }
-
-                #endregion
-
+                res.Iteration = i; // iteration completed without solution
             }
 
-            #endregion
-
             // Calculate Pk, Qk for slack bus
-            var slackBus = buses.FirstOrDefault(b => b.BusType == BusTypeEnum.Slack);
-            slackBus.Sbus = LFC.CalcPower(slackBus, Y, buses);
+            res.NRBuses.SlackBus.Sbus = LFC.CalcPower(res.NRBuses.SlackBus, Y, buses);
 
             return new Result<BU>
             {
                 Data = buses,
-                IterationStop = i,
-                Error = isFound ? ErrorEnum.NoError : ErrorEnum.MaxIteration,
-                ErrorMessage = isFound ? "" : "Maximum iterations reached without convergence."
+                IterationStop = res.Iteration,
+                Error = res.IsSolution ? ErrorEnum.NoError : ErrorEnum.MaxIteration,
+                ErrorMessage = res.IsSolution ? "" : "Maximum iterations reached without convergence."
             };
         }
 
-        #region Track error and convergence
-
-        static bool IsSolutionFound(BU buses, double threshold)
+        /// <summary>
+        /// An iteration of Newton-Raphson load flow calculation.
+        /// </summary>
+        /// <returns>All calculated values for an iteration</returns>
+        internal static NRResult Iterate(BU buses, MC YMatrix, double threshold = 0.0001, bool calcJMatrixOnce = false)
         {
-            var cv = true;
-            foreach (var bus in buses.Where(b => b.BusType != BusTypeEnum.Slack))
-            {
-                cv = cv && bus.Err.QErr < threshold;
-                if (bus.BusData.BusType != BusTypeEnum.PV)
-                {
-                    cv = cv && bus.Err.PErr < threshold;
-                }
-            }
-            return cv;
+            var res = new NRResult();
+            var Y = YMatrix;
+
+            // Step 1
+            // Determine classification of each bus
+            res.NRBuses = JC.ReIndexBusPQ(buses);
+
+            // Step 2
+            LFNR.CalcDeltaPQ(Y, res); // delta P and Q
+
+            if (LFNR.CheckSolution(res, threshold))
+                return res;
+
+            // Step 3
+            LFNR.UpdatePVBusStatus(res);
+
+            // Step 4
+            // Determine classification of each bus
+            // PV bus classification might have changed in step 3
+            res.NRBuses = JC.ReIndexBusPQ(buses);
+
+            // Step 5
+            // Calculate Jacobian matrix
+            CalcJMatrix(Y, res, calcJMatrixOnce);
+
+            // Step 6
+            CalcAVDelta(res);
+
+            // Step 7
+            LFNR.UpdateBusAV(res);
+
+            return res;
         }
 
-        static bool IsDiverged(BU buses, int iteration)
-        {
-            if (iteration % 5 != 0)
-                return false;
-
-            var cv = true;
-            foreach (var bus in buses.Where(b => b.BusType != BusTypeEnum.Slack))
-            {
-                cv = cv && bus.Err.QErr < bus.ErrRef.QErr;
-                if (bus.BusData.BusType != BusTypeEnum.PV)
-                    cv = cv && bus.Err.PErr < bus.ErrRef.PErr;
-            }
-            return !cv;
-        }
         #endregion
+
+        internal static void CalcJMatrix(MC YMatrix, NRResult nrRes, bool calcJMatrixOnce)
+        {
+            if (calcJMatrixOnce && nrRes.J1Matrix != null)
+                return;
+            nrRes.J1Matrix = JC.CreateJ1(YMatrix, nrRes.NRBuses);
+            nrRes.J4Matrix = JC.CreateJ4(YMatrix, nrRes.NRBuses);
+        }
+
+        internal static void CalcAVDelta(NRResult nrRes)
+        {
+            var j1Size = nrRes.NRBuses.J1Size;
+            var j4Size = nrRes.NRBuses.J4Size;
+
+            var PDelta = nrRes.PQDelta.SubMatrix(0, j1Size.Row, 0, 1);
+            var ADelta = nrRes.J1Matrix.Solve(PDelta);
+            nrRes.ADelta = ADelta.ToColumnMajorArray();
+
+            var QDelta = nrRes.PQDelta.SubMatrix(j1Size.Row, j4Size.Row, 0, 1);
+            var VDelta = nrRes.J4Matrix.Solve(QDelta);
+            nrRes.VDelta = VDelta.ToColumnMajorArray();
+
+            var AVDelta = Matrix<double>.Build.Dense(j1Size.Row + j4Size.Row, 1);
+            AVDelta.SetSubMatrix(0, 0, ADelta);
+            AVDelta.SetSubMatrix(j1Size.Row, 0, VDelta);
+            nrRes.AVDelta = AVDelta; // delta A and V
+        }
 
     }
 }

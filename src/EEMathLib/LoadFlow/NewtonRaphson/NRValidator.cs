@@ -10,7 +10,7 @@ using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
-    public static class NRValidator
+    internal static class NRValidator
     {        
         #region Iterate
 

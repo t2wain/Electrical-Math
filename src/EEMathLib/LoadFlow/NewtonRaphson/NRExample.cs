@@ -1,10 +1,9 @@
-﻿using EEMathLib.DTO;
-using EEMathLib.LoadFlow.Data;
+﻿using EEMathLib.LoadFlow.Data;
 using EEMathLib.MatrixMath;
 using System.Linq;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
-using LFC = EEMathLib.LoadFlow.LFCommon;
 using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
+using LFFD = EEMathLib.LoadFlow.NewtonRaphson.LFFastDecoupled;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
@@ -168,30 +167,39 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
             var res = LFNR.Solve(nw, threshold, 50);
 
-            if (res.Error == ErrorEnum.Divergence)
-                return false;
-
-
-            var rbuses = LFC.CalcResult(res.Data).ToDictionary(bus => bus.ID);
-            var dbuses = data.LFResult.ToDictionary(bus => bus.ID);
-
-            var c = true;
-            foreach (var dbus in dbuses.Values)
-            {
-                var rb = rbuses[dbus.ID];
-                c = c && Checker.EQPct(rb.Voltage, dbus.Voltage, threshold);
-                c = c && Checker.EQPct(rb.Angle, dbus.Angle, threshold);
-
-                if (rb.BusType == BusTypeEnum.PQ
-                    || rb.BusType == BusTypeEnum.Slack)
-                {
-                    c = c && Checker.EQPct(rb.Pgen, dbus.Pgen, threshold);
-                    c = c && Checker.EQPct(rb.Qgen, dbus.Qgen, threshold);
-                }
-            }
-
-            return c;
+            return !res.IsError;
         }
+
+        public static bool LFSolve_FastDecoupled(ILFData data)
+        {
+
+            var nw = data.CreateNetwork();
+            var threshold = 0.001;
+
+            var res = LFFD.Solve(nw, threshold, 50);
+
+            return !res.IsError;
+        }
+
+        public static bool LFSolve_FastDecoupled_JMatrix_Once(ILFData data)
+        {
+
+            var nw = data.CreateNetwork();
+            var threshold = 0.001;
+
+            var res = LFFD.Solve(nw, threshold, 50, true);
+
+            return !res.IsError;
+        }
+
+        public static bool LFSolve_DCLike(ILFData data)
+        {
+
+            var nw = data.CreateNetwork();
+            var buses = LFDC.Solve(nw);
+            return true;
+        }
+
 
         #endregion
     }

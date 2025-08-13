@@ -11,38 +11,42 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     /// Store all the calculated result 
     /// per Newton-Raphson iteration
     /// </summary>
-    public class NRResult
+    internal class NRResult
     {
         public int Iteration { get; set; }
         public JC.NRBuses NRBuses { get; set; }
         public MD JMatrix { get; set; }
+        public MD J1Matrix { get; set; }
+        public MD J4Matrix { get; set; }
         public MD PQDelta { get; set; }
         public MD AVDelta { get; set; }
+        public double MaxErr { get; set; }
+        public bool IsSolution { get; set; }
+
+        #region Output for test validation
+
         public double[] ADelta { get; set; }
         public double[] VDelta { get; set; }
         public double[] VBus { get; set; }
         public double[] ABus { get; set; }
         public double[] PCal { get; set; }
         public double[] QCal { get; set; }
-        public double MaxErr { get; set; }
-        public bool IsSolution { get; set; }
+
+        #endregion
 
         public void ClearResult()
         {
-            NRBuses = new JC.NRBuses { AllBuses = NRBuses.AllBuses };
             JMatrix = null;
+            J1Matrix = null;
+            J4Matrix = null;
             PQDelta = null;
             AVDelta = null;
-            ADelta = null;
-            VDelta = null;
-            VBus = null;
-            ABus = null;
-            PCal = null;
-            QCal = null;
-            MaxErr = 0;
-            IsSolution = false;
         }
 
+        /// <summary>
+        /// Parse input data of the load flow result
+        /// of a selected iteration for validation during testing.
+        /// </summary>
         public static NRResult Parse(ILFData data, int iteration)
         {
             var nrData = data.GetNewtonRaphsonData(iteration);

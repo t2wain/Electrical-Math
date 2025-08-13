@@ -38,13 +38,13 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             public BusResult SlackBus { get; set; }
 
             /// <summary>
-            /// All PQ buses in the current iteration. 
+            /// PQ buses in the current iteration. 
             /// Calculate V and A, given P and Q
             /// </summary>
             public BU PQBuses { get; set; }
 
             /// <summary>
-            /// Include all PV buses.
+            /// PV buses in the current iteration. 
             /// Calculate Q and A, given P and V
             /// </summary>
             public BU PVBuses { get; set; }

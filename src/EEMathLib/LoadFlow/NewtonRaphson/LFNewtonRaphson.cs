@@ -79,7 +79,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// An iteration of Newton-Raphson load flow calculation.
         /// </summary>
         /// <returns>All calculated values for an iteration</returns>
-        public static NRResult Iterate(BU buses, MC YMatrix, double threshold = 0.0001)
+        internal static NRResult Iterate(BU buses, MC YMatrix, double threshold = 0.0001)
         {
             var res = new NRResult();
             var Y = YMatrix;
@@ -90,17 +90,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
             // Step 2
             CalcDeltaPQ(Y, res); // delta P and Q
-                                                     
-            res.MaxErr = res.PQDelta
-                .ToColumnMajorArray()
-                .Select(v => Math.Abs(v))
-                .Max();
 
-            if (res.MaxErr <= threshold)
-            {
-                res.IsSolution = true;
+            if (CheckSolution(res, threshold))
                 return res;
-            }
 
             // Step 3
             UpdatePVBusStatus(res);
@@ -112,7 +104,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
             // Step 5
             // Calculate Jacobian matrix
-            res.JMatrix = JC.CreateJMatrix(Y, res.NRBuses);
+            CalcJMatrix(Y, res);
 
             // Step 6
             CalcAVDelta(res);
@@ -127,7 +119,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         #region Calculate
 
-        public static BU Initialize(IEnumerable<EEBus> buses) =>
+        internal static BU Initialize(IEnumerable<EEBus> buses) =>
             buses
                 .OrderBy(b => b.BusIndex)
                 .Select(b => new BusResult
@@ -145,7 +137,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 })
                 .ToList();
 
-        public static NRResult CalcDeltaPQ(MC Y, JC.NRBuses nrBuses)
+        internal static NRResult CalcDeltaPQ(MC Y, JC.NRBuses nrBuses)
         {
             var nrRes = new NRResult
             {
@@ -155,7 +147,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return nrRes;
         }
 
-        public static void CalcDeltaPQ(MC Y, NRResult nrRes)
+        internal static void CalcDeltaPQ(MC Y, NRResult nrRes)
         {
             var nrBuses = nrRes.NRBuses;
             nrRes.PCal = new double[nrBuses.Buses.Count()];
@@ -182,7 +174,17 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
         }
 
-        public static void UpdatePVBusStatus(JC.NRBuses nrBuses, MD mxPQDelta)
+        internal static bool CheckSolution(NRResult res, double threshold)
+        {
+            res.MaxErr = res.PQDelta
+                .ToColumnMajorArray()
+                .Select(v => Math.Abs(v))
+                .Max();
+            res.IsSolution = res.MaxErr <= threshold;
+            return res.IsSolution;
+        }
+
+        internal static void UpdatePVBusStatus(JC.NRBuses nrBuses, MD mxPQDelta)
         {
             var nrRes = new NRResult
             {
@@ -192,7 +194,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             UpdatePVBusStatus(nrRes);
         }
 
-        public static void UpdatePVBusStatus(NRResult nrRes)
+        internal static void UpdatePVBusStatus(NRResult nrRes)
         {
             var pcnt = nrRes.NRBuses.J1Size.Row;
             foreach (var b in nrRes.NRBuses.AllPVBuses)
@@ -210,7 +212,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
         }
 
-        public static void CalcAVDelta(MD JMatrix, JC.NRBuses nrBuses, MD mxPQDelta)
+        internal static void CalcJMatrix(MC YMatrix, NRResult nrRes)
+        {
+            nrRes.JMatrix = JC.CreateJMatrix(YMatrix, nrRes.NRBuses);
+        }
+
+        internal static void CalcAVDelta(MD JMatrix, JC.NRBuses nrBuses, MD mxPQDelta)
         {
             var nrRes = new NRResult
             {
@@ -221,7 +228,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             CalcAVDelta(nrRes);
         }
 
-        public static void CalcAVDelta(NRResult nrRes)
+        internal static void CalcAVDelta(NRResult nrRes)
         {
             nrRes.AVDelta = nrRes.JMatrix.Solve(nrRes.PQDelta); // delta A and V
             var acnt = nrRes.NRBuses.J1Size.Row;
@@ -241,7 +248,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
         }
 
-        public static void UpdateBusAV(JC.NRBuses nrBuses, MD mxAVDelta)
+        internal static void UpdateBusAV(JC.NRBuses nrBuses, MD mxAVDelta)
         {
             var nrRes = new NRResult
             {
@@ -251,7 +258,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             UpdateBusAV(nrRes);
         }
 
-        public static void UpdateBusAV(NRResult nrRes)
+        internal static void UpdateBusAV(NRResult nrRes)
         {
             var acnt = nrRes.NRBuses.J1Size.Row;
             nrRes.ABus = new double[nrRes.NRBuses.AllBuses.Count()];
