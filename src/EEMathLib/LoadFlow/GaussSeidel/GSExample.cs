@@ -38,8 +38,10 @@ namespace EEMathLib.LoadFlow.GaussSeidel
         public static bool Solve(ILFData data)
         {
             var nw = data.CreateNetwork();
-            var threshold = 0.0125;
-            var res = LFGS.Solve(nw, threshold, 100, 20);
+            var threshold = 0.0001;
+
+            var solver = new LFGaussSeidel();
+            var res = solver.Solve(nw, threshold, 100);
 
             if (res.Error == ErrorEnum.Divergence)
                 return false;
@@ -47,22 +49,27 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             var rbuses = LFC.CalcResult(res.Data).ToDictionary(bus => bus.ID);
             var dbuses = data.LFResult.ToDictionary(bus => bus.ID);
 
+            threshold = 0.01;
             var c = true;
             foreach (var dbus in dbuses.Values)
             {
                 var rb = rbuses[dbus.ID];
-                c = c && Checker.EQPct(rb.Voltage, dbus.Voltage, threshold);
-                c = c && Checker.EQPct(rb.Angle, dbus.Angle, threshold);
+                var v = Checker.EQ(rb.Voltage, dbus.Voltage, threshold);
+                c &= v;
+                v = Checker.EQ(rb.Angle, dbus.Angle, threshold);
+                c &= v;
 
                 if (rb.BusType == BusTypeEnum.PQ
                     || rb.BusType == BusTypeEnum.Slack)
                 {
-                    c = c && Checker.EQPct(rb.Pgen, dbus.Pgen, threshold);
-                    c = c && Checker.EQPct(rb.Qgen, dbus.Qgen, threshold);
+                    v = Checker.EQ(rb.Pgen, dbus.Pgen, threshold);
+                    c &= v;
+                    v = Checker.EQ(rb.Qgen, dbus.Qgen, threshold);
+                    c &= v;
                 }
             }
 
-            return c;
+            return !res.IsError;
         }
 
         #endregion

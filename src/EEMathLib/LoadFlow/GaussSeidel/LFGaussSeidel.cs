@@ -6,114 +6,69 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using LFC = EEMathLib.LoadFlow.LFCommon;
+using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
+using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
 namespace EEMathLib.LoadFlow.GaussSeidel
 {
     /// <summary>
     /// Gauss-Siedel load flow algorithm
     /// </summary>
-    public static class LFGaussSeidel
+    public class LFGaussSeidel : ILFSolver
     {
-        /// <summary>
-        /// Calculate load flow
-        /// </summary>
-        public static Result<IEnumerable<BusResult>> Solve(EENetwork network,
-            double threshold = 0.015, int maxIteration = 100, int minIteration = 50) =>
-            Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration, minIteration);
+        #region Solve
 
         /// <summary>
         /// Calculate load flow
         /// </summary>
-        public static Result<IEnumerable<BusResult>> Solve(IEnumerable<BusResult> buses, Matrix<Complex> YMatrix, 
-            double threshold = 0.015, int maxIteration = 100, int minIteration = 50)
+        public Result<BU> Solve(EENetwork network,
+            double threshold = 0.0001, int maxIteration = 100) =>
+            Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration);
+
+        /// <summary>
+        /// Calculate load flow
+        /// </summary>
+        protected Result<BU> Solve(BU buses, MC YMatrix, 
+            double threshold = 0.0001, int maxIteration = 100)
         {
             var Y = YMatrix;
 
+            var slackBus = buses
+                .Where(b => b.BusData.BusType == BusTypeEnum.Slack)
+                .First();
+
             #region Iteration
 
-            BusResult slackBus = null;
-            var i = 0;
-            var isFound = false;
-            while (i++ < maxIteration)
+            GSResult res = null;
+            var lastErr = double.MaxValue;
+            foreach (var i in Enumerable.Range(0, maxIteration))
             {
-                // calculate Vk, Ak, Qk for each bus
-                foreach (var bus in buses)
+                res = Iterate(YMatrix, buses);
+                res.Iteration = i;
+
+                if (res.MaxVErr <= threshold)
                 {
-                    #region Calulate Bus
-
-                    // load bus
-                    if (bus.BusData.BusType == BusTypeEnum.PQ)
-                    {
-                        var vnxt = LFC.CalcVoltage(bus, Y, buses);
-                        bus.UpdateVErr(bus.BusVoltage.Magnitude, vnxt.Magnitude, i);
-                        bus.UpdateAErr(bus.BusVoltage.Phase, vnxt.Phase, i);
-                        // update Vk, Ak
-                        bus.BusVoltage = vnxt;
-                    }
-
-                    // voltage controlled bus
-                    else if (bus.BusData.BusType == BusTypeEnum.PV)
-                    {
-                        // calculate Qk
-                        var sk = LFC.CalcPower(bus, Y, buses);
-                        bus.UpdatePErr(bus.Sbus.Real, sk.Real, i);
-
-                        var (snxt, bt) = LFC.CalcMaxQk(bus, sk);
-                        bus.UpdateQErr(bus.Sbus.Imaginary, snxt.Imaginary, i, bt != bus.BusType);
-                        bus.BusType = bt;
-                        // update Sbus
-                        bus.Sbus = snxt;
-
-                        // calculate Vbus
-                        var vnxt = LFC.CalcVoltage(bus, Y, buses);
-                        bus.UpdateAErr(bus.BusVoltage.Phase, vnxt.Phase, i);
-
-                        if (bt == BusTypeEnum.PV)
-                        {
-                            // maintain bus controlled voltage and update Ak
-                            bus.BusVoltage = Complex.FromPolarCoordinates(bus.BusData.Voltage, vnxt.Phase);
-                        }
-                        else
-                        {
-                            // required switching to PQ bus
-                            // since Qk is outside limits of Qgen range (min and max)
-                            bus.BusType = BusTypeEnum.PQ;
-                            bus.UpdateVErr(bus.BusVoltage.Magnitude, vnxt.Magnitude, i);
-                            // update Vk, Ak
-                            bus.BusVoltage = vnxt;
-                        }
-                    }
-
-                    // save slack bus for later calculation
-                    else if (bus.BusData.BusType == BusTypeEnum.Slack)
-                    {
-                        slackBus = bus;
-                    }
-
-                    #endregion
-                }
-
-                #region Check for solution
-
-                if (i < minIteration)
-                    continue;
-                else if (IsSolutionFound(buses, threshold))
-                {
-                    isFound = true;
+                    res.IsSolution = true;
                     break;
                 }
-                else if (IsDiverged(buses, i))
+                
+                if (i == 1)
                 {
-                    return new Result<IEnumerable<BusResult>>
-                    {
-                        Data = buses,
-                        IterationStop = i,
-                        Error = ErrorEnum.Divergence,
-                        ErrorMessage = "Divergence detected during Gauss-Siedel iterations."
-                    };
+                    lastErr = res.MaxVErr;
+                }
+                else if (i % 5 == 0)
+                {
+                    if (res.MaxVErr > lastErr)
+                        return new Result<BU>
+                        {
+                            Data = buses,
+                            IterationStop = i,
+                            Error = ErrorEnum.Divergence,
+                            ErrorMessage = "Divergence detected during Gauss-Siedel iterations."
+                        };
+                    else lastErr = res.MaxVErr;
                 }
 
-                #endregion
             }
 
             #endregion
@@ -121,18 +76,79 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             // Calculate Pk, Qk for slack bus
             slackBus.Sbus = LFC.CalcPower(slackBus, Y, buses);
 
-            return new Result<IEnumerable<BusResult>>
+            return new Result<BU>
             {
                 Data = buses,
-                IterationStop = i,
-                Error = isFound ? ErrorEnum.NoError : ErrorEnum.MaxIteration,
-                ErrorMessage = isFound ? "" : "Maximum iterations reached without convergence."
+                IterationStop = res.Iteration,
+                Error = res.IsSolution ? ErrorEnum.NoError : ErrorEnum.MaxIteration,
+                ErrorMessage = res.IsSolution ? "" : "Maximum iterations reached without convergence."
             };
         }
 
-        #region Calculation
+        internal GSResult Iterate(MC YMatrix, BU buses)
+        {
+            var Y = YMatrix;
 
-        public static IEnumerable<BusResult> Initialize(IEnumerable<EEBus> buses) =>
+            var bcnt = buses.Count();
+            var res = new GSResult
+            {
+                ABus = new double[bcnt],
+                VBus = new double[bcnt],
+                QCalc = new double[bcnt],
+            };
+
+            foreach (var bus in buses)
+            {
+                // load bus
+                if (bus.BusData.BusType == BusTypeEnum.PQ)
+                {
+                    var vnxt = LFC.CalcVoltage(bus, Y, buses);
+                    res.ABus[bus.BusIndex] = vnxt.Phase;
+                    res.VBus[bus.BusIndex] = vnxt.Magnitude;
+                    UpdateErr(res, bus.BusVoltage, vnxt);
+                    // update Vk, Ak
+                    bus.BusVoltage = vnxt;
+
+                }
+
+                // voltage controlled bus
+                else if (bus.BusData.BusType == BusTypeEnum.PV)
+                {
+                    // calculate Qk
+                    var sk = LFC.CalcPower(bus, Y, buses);
+                    var (snxt, bt) = LFC.CalcMaxQk(bus, sk);
+                    bus.BusType = bt;
+                    // update Sbus
+                    bus.Sbus = snxt;
+                    bus.BusType = bt;
+
+                    // calculate Vbus
+                    var vnxt = LFC.CalcVoltage(bus, Y, buses);
+                    //bus.UpdateAErr(bus.BusVoltage.Phase, vnxt.Phase, i);
+
+                    if (bt == BusTypeEnum.PV)
+                    {
+                        // maintain bus controlled voltage and update Ak
+                        var vnext = Complex.FromPolarCoordinates(bus.BusData.Voltage, vnxt.Phase);
+                        UpdateErr(res, bus.BusVoltage, vnext);
+                        bus.BusVoltage = Complex.FromPolarCoordinates(bus.BusData.Voltage, vnxt.Phase);
+                    }
+                    else
+                    {
+                        // since Qk is outside limits of Qgen range (min and max)
+                        // update Vk, Ak
+                        UpdateErr(res, bus.BusVoltage, vnxt);
+                        bus.BusVoltage = vnxt;
+                    }
+                }
+            }
+
+            return res;
+        }
+
+        #endregion
+
+        internal static BU Initialize(IEnumerable<EEBus> buses) =>
             buses
                 .OrderBy(b => b.BusIndex)
                 .Select(b => new BusResult
@@ -146,44 +162,11 @@ namespace EEMathLib.LoadFlow.GaussSeidel
                 })
                 .ToList();
 
-        #endregion
-
-        #region Track error and convergence
-
-        static bool IsSolutionFound(IEnumerable<BusResult> buses, double threshold)
+        static void UpdateErr(GSResult res, Complex vcur, Complex vnext)
         {
-            var cv = true;
-            foreach (var bus in buses.Where(b => b.BusType != BusTypeEnum.Slack))
-            {
-                cv = cv && Math.Abs(bus.BusVoltage.Magnitude) > 0
-                    && Math.Abs(bus.Err.VErr / bus.BusVoltage.Magnitude) < threshold;
-                cv = cv && Math.Abs(bus.BusVoltage.Phase) > 0
-                    && Math.Abs(bus.Err.AErr / bus.BusVoltage.Phase) < 0.1 * threshold;
-                if (bus.BusData.BusType == BusTypeEnum.PV)
-                {
-                    cv = cv && Math.Abs(bus.Sbus.Imaginary) > 0
-                        && Math.Abs(bus.Err.QErr / bus.Sbus.Imaginary) < threshold;
-                }
-            }
-            return cv;
+            var e = Math.Abs((vcur - vnext).Magnitude);
+            res.MaxVErr = Math.Max(res.MaxVErr, e);
         }
 
-        static bool IsDiverged(IEnumerable<BusResult> buses, int iteration)
-        {
-            if (iteration % 5 != 0)
-                return false;
-
-            var cv = true;
-            foreach (var bus in buses.Where(b => b.BusType != BusTypeEnum.Slack))
-            {
-                cv = cv && (bus.Err.VErr < 0.1 || bus.ErrRef.VErr < 0.1 || bus.Err.VErr < bus.ErrRef.VErr * 3);
-                cv = cv && (bus.Err.AErr < 0.1 || bus.ErrRef.AErr < 0.1 || bus.Err.AErr < bus.ErrRef.AErr * 3);
-                if (bus.BusData.BusType == BusTypeEnum.PV)
-                    cv = cv && (bus.Err.QErr < 0.1 || bus.ErrRef.QErr < 0.1 || bus.Err.QErr < bus.ErrRef.QErr * 3);
-            }
-            return !cv;
-        }
-
-        #endregion
     }
 }
