@@ -137,6 +137,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 })
                 .ToList();
 
+        /// <summary>
+        /// Calculation step for each iteration
+        /// </summary>
         internal static NRResult CalcDeltaPQ(MC Y, JC.NRBuses nrBuses)
         {
             var nrRes = new NRResult
@@ -147,6 +150,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return nrRes;
         }
 
+        /// <summary>
+        /// Calculation step for each iteration
+        /// </summary>
         internal static void CalcDeltaPQ(MC Y, NRResult nrRes)
         {
             var nrBuses = nrRes.NRBuses;
@@ -174,6 +180,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
         }
 
+        /// <summary>
+        /// Calculation step for each iteration
+        /// </summary>
         internal static bool CheckSolution(NRResult res, double threshold)
         {
             res.MaxErr = res.PQDelta
@@ -194,6 +203,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             UpdatePVBusStatus(nrRes);
         }
 
+        /// <summary>
+        /// Calculation step for each iteration
+        /// </summary>
         internal static void UpdatePVBusStatus(NRResult nrRes)
         {
             var pcnt = nrRes.NRBuses.J1Size.Row;
@@ -212,11 +224,21 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
         }
 
+        /// <summary>
+        /// Not implmented. Calculation step for each iteration.
+        /// Require sub-class to override the method as needed.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
         virtual internal void CalcJMatrix(MC YMatrix, NRResult nrRes)
         {
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Not implmented. Calculation step for each iteration.
+        /// Require sub-class to override the method as needed.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
         virtual internal void CalcAVDelta(NRResult nrRes)
         {
             throw new NotImplementedException();
@@ -232,6 +254,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             UpdateBusAV(nrRes);
         }
 
+        /// <summary>
+        /// Calculation step for each iteration
+        /// </summary>
         internal static void UpdateBusAV(NRResult nrRes)
         {
             var acnt = nrRes.NRBuses.J1Size.Row;

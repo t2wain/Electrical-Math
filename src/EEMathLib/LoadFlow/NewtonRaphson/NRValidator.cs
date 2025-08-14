@@ -10,6 +10,10 @@ using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
+    /// <summary>
+    /// Allow debuging and validation of all calculation steps
+    /// in the Newton-Raphson load flow algorithm
+    /// </summary>
     internal static class NRValidator
     {        
         #region Iterate
@@ -103,6 +107,10 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         #region Validate
 
+        /// <summary>
+        /// Validate the result of various calculation steps
+        /// against the data
+        /// </summary>
         internal static bool ValidateIteration(NRResult res, ILFData data)
         {
             var c = true;
@@ -136,6 +144,10 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return c;
         }
 
+        /// <summary>
+        /// Validate the result calculation of Jacobian matrix
+        /// against the data
+        /// </summary>
         internal static bool Validate_JMatrix(NRResult nrRes, ILFData data)
         {
             var c = true;
@@ -158,6 +170,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return c;
         }
 
+        /// <summary>
+        /// Validate the calculation of Jacobian matrix against the data
+        /// </summary>
         internal static bool Validate_JMatrix(Matrix<double> J1, Matrix<double> J2,
             Matrix<double> J3, Matrix<double> J4, ILFData data, int iteration)
         {
@@ -197,6 +212,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         }
 
+        /// <summary>
+        /// Validate the result of the calculation step against the data
+        /// </summary>
         internal static bool Validate_PQDelta(Matrix<double> mxPQDelta, ILFData data, int iteration)
         {
             var nrData = data.GetNewtonRaphsonData(iteration);
@@ -210,6 +228,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return c;
         }
 
+        /// <summary>
+        /// Validate the result of the calculation step against the data
+        /// </summary>
         internal static bool Validate_PQCalc(NRResult nrRes, ILFData data)
         {
             var c = true;
@@ -224,6 +245,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return c;
         }
 
+        /// <summary>
+        /// Validate the result of the calculation step against the data
+        /// </summary>
         internal static bool Validate_AVDelta(NRResult nrRes, ILFData data)
         {
             var c = true;
@@ -238,6 +262,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return c;
         }
 
+        /// <summary>
+        /// Validate the result of the calculation step against the data
+        /// </summary>
         internal static bool Validate_AVBus(NRResult nrRes, ILFData data)
         {
             var c = true;
