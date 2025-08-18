@@ -1,7 +1,6 @@
 ﻿using EEMathLib.LoadFlow.Data;
 using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -58,6 +57,35 @@ namespace EEMathLib.LoadFlow
             return sk;
         }
 
+        public static IEnumerable<LineResult> CalcPower(IEnumerable<EELine> lines, IEnumerable<BusResult> buses)
+        {
+            var dbuses = buses.ToDictionary(b => b.ID);
+            var lst = lines
+                .Select(l => new { Line = l, S = CalcPower(l, dbuses) })
+                .Select(o => new LineResult 
+                {
+                    LineData = o.Line,
+                    SLine = o.S,
+                    P = o.S.Real,
+                    Q = o.S.Imaginary,
+                }).ToList();
+            return lst;
+        }
+
+        public static Complex CalcPower(EELine line, IDictionary<string, BusResult> buses)
+        {
+            var vi = buses[line.FromBus.ID].BusVoltage;
+            var vj = buses[line.ToBus.ID].BusVoltage;
+            var yseries = 1 / line.ZImpSeries;
+            var yshunt = line.YImpShunt;
+            var sseries = vi * (vi - vj).Conjugate() * yseries.Conjugate();
+            var sshunt = Complex.Zero;
+            if (line.YImpShunt.Magnitude > 0)
+                sshunt = vi * (vi * yshunt / 2).Conjugate();
+            var sline = sseries + sshunt;
+            return sline;
+        }
+
         /// <summary>
         /// Calculate Qk for given Sk based on Qgen limits.
         /// </summary>
@@ -81,24 +109,5 @@ namespace EEMathLib.LoadFlow
                 // required Qgen is within limits to maintain bus voltage
                 return (new Complex(pk, sk.Imaginary), BusTypeEnum.PV);
         }
-
-        public static IEnumerable<EEBus> CalcResult(IEnumerable<BusResult> buses) =>
-            buses.Select(b => new EEBus
-            {
-                BusIndex = b.BusIndex,
-                ID = b.ID,
-                BusType = b.BusType,
-                Voltage = b.BusVoltage.Magnitude,
-                Angle = Phasor.ConvertRadianToDegree(b.BusVoltage.Phase),
-                Pgen = b.Sbus.Real + b.BusData.Pload,
-                Qgen = b.Sbus.Imaginary + b.BusData.Qload,
-                Pload = b.BusData.Pload,
-                Qload = b.BusData.Qload,
-                Qmin = b.BusData.Qmin,
-                Qmax = b.BusData.Qmax
-            })
-            .ToList();
-
-
     }
 }

@@ -46,7 +46,6 @@ namespace EEMathLib.LoadFlow.Data
         protected double _BasePower;
         protected IEnumerable<EEBus> _Busses; 
         protected IEnumerable<EELine> _Lines; 
-        protected IEnumerable<EEBus> _LFResult; 
         protected MxDTO<Complex> _YResult;
 
         public double BasePower => _BasePower;
@@ -54,7 +53,6 @@ namespace EEMathLib.LoadFlow.Data
         public IEnumerable<EEBus> Busses => _Busses;
         public IEnumerable<EELine> Lines => _Lines;
 
-        public IEnumerable<EEBus> LFResult => _LFResult;
         public MxDTO<Complex> YResult => _YResult;
 
         public virtual EENetwork CreateNetwork()
@@ -79,7 +77,6 @@ namespace EEMathLib.LoadFlow.Data
             _network = null;
             _Busses = null;
             _Lines = null;
-            _LFResult = null;
             _YResult = null;
         }
     }

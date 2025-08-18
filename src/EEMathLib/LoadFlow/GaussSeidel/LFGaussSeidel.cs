@@ -1,12 +1,11 @@
 ﻿using EEMathLib.DTO;
 using EEMathLib.LoadFlow.Data;
-using MathNet.Numerics.LinearAlgebra;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using LFC = EEMathLib.LoadFlow.LFCommon;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
+using LFC = EEMathLib.LoadFlow.LFCommon;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
 namespace EEMathLib.LoadFlow.GaussSeidel
@@ -18,20 +17,21 @@ namespace EEMathLib.LoadFlow.GaussSeidel
     {
         #region Solve
 
-        /// <summary>
-        /// Calculate load flow
-        /// </summary>
-        public Result<BU> Solve(EENetwork network,
-            double threshold = 0.0001, int maxIteration = 100) =>
-            Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration);
+        ///// <summary>
+        ///// Calculate load flow
+        ///// </summary>
+        //public Result<LFResult> Solve(EENetwork network,
+        //    double threshold = 0.0001, int maxIteration = 100) =>
+        //    Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration);
 
         /// <summary>
         /// Calculate load flow
         /// </summary>
-        protected Result<BU> Solve(BU buses, MC YMatrix, 
+        public Result<LFResult> Solve(EENetwork network, 
             double threshold = 0.0001, int maxIteration = 100)
         {
-            var Y = YMatrix;
+            var Y = network.YMatrix;
+            var buses = Initialize(network.Buses);
 
             var slackBus = buses
                 .Where(b => b.BusData.BusType == BusTypeEnum.Slack)
@@ -43,7 +43,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             var lastErr = double.MaxValue;
             foreach (var i in Enumerable.Range(0, maxIteration))
             {
-                res = Iterate(YMatrix, buses);
+                res = Iterate(Y, buses);
                 res.Iteration = i;
 
                 if (res.MaxVErr <= threshold)
@@ -59,9 +59,9 @@ namespace EEMathLib.LoadFlow.GaussSeidel
                 else if (i % 5 == 0)
                 {
                     if (res.MaxVErr > lastErr)
-                        return new Result<BU>
+                        return new Result<LFResult>
                         {
-                            Data = buses,
+                            Data = new LFResult { Buses = buses, Lines = null },
                             IterationStop = i,
                             Error = ErrorEnum.Divergence,
                             ErrorMessage = "Divergence detected during Gauss-Siedel iterations."
@@ -76,9 +76,17 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             // Calculate Pk, Qk for slack bus
             slackBus.Sbus = LFC.CalcPower(slackBus, Y, buses);
 
-            return new Result<BU>
+            // Calculate power flow in lines
+            IEnumerable<LineResult> lineRes = null;
+            if (res.IsSolution)
+                lineRes = LFC.CalcPower(network.Lines, buses);
+
+            // Prepare solution result
+            var lfrres = new LFResult { Buses = buses, Lines = lineRes };
+
+            return new Result<LFResult>
             {
-                Data = buses,
+                Data = lfrres,
                 IterationStop = res.Iteration,
                 Error = res.IsSolution ? ErrorEnum.NoError : ErrorEnum.MaxIteration,
                 ErrorMessage = res.IsSolution ? "" : "Maximum iterations reached without convergence."

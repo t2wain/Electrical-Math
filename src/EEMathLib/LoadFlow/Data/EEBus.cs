@@ -36,5 +36,11 @@
 
         public double Qmin { get; set; }
         public double Qmax { get; set; }
+
+        public double VoltageResult { get; set; }
+        public double AngleResult { get; set; }
+        public double QgenResult { get; set; }
+        public double PTransmitResult { get; set; }
+        public double QTransmitResult { get; set; }
     }
 }

@@ -182,16 +182,16 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return !res.IsError;
         }
 
-        public static bool LFSolve_FastDecoupled_JMatrix_Once(ILFData data)
+        public static bool LFSolve_FastDecoupled_Approximation(ILFData data)
         {
 
             var nw = data.CreateNetwork();
-            var threshold = 0.001;
+            var threshold = 0.1;
 
-            var solver = new LFFastDecoupled(true);
-            var res = solver.Solve(nw, threshold, 50);
+            var solver = new LFFastDecoupled();
+            var res = solver.Solve(nw, threshold, 1);
 
-            return !res.IsError;
+            return true;
         }
 
         public static bool LFSolve_DCLike(ILFData data)

@@ -60,14 +60,14 @@ namespace EEMathLib.LoadFlow
             {
                 var i = l.FromBus.BusIndex;
                 var j = l.ToBus.BusIndex;
-                var yl = (1 / l.ZImp) + (l.YImp / 2);
+                var yl = (1 / l.ZImpSeries) + (l.YImpShunt / 2);
 
                 var yii = Y[i, i];
                 var yjj = Y[j, j];
                 var yij = Y[i, j];
                 var yji = Y[i, j];
 
-                var y = 1 / l.ZImp;
+                var y = 1 / l.ZImpSeries;
                 Y[i, i] += yl;
                 Y[j, j] += yl;
                 Y[i, j] -= y;

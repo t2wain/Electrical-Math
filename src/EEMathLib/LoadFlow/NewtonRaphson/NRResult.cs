@@ -3,6 +3,7 @@ using EEMathLib.MatrixMath;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
 using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
+using MathNet.Numerics.LinearAlgebra.Factorization;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
@@ -17,11 +18,14 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         public JC.NRBuses NRBuses { get; set; }
         public MD JMatrix { get; set; }
         public MD J1Matrix { get; set; }
+        public LU<double> J1LUMatrix { get; set; }
         public MD J4Matrix { get; set; }
+        public LU<double> J4LUMatrix { get; set; }
         public MD PQDelta { get; set; }
         public MD AVDelta { get; set; }
         public double MaxErr { get; set; }
         public bool IsSolution { get; set; }
+        public bool PVBusStatusChanged { get; set; }
 
         #region Output for test validation
 
@@ -38,7 +42,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         {
             JMatrix = null;
             J1Matrix = null;
+            J1LUMatrix = null;
             J4Matrix = null;
+            J4LUMatrix = null;
             PQDelta = null;
             AVDelta = null;
         }

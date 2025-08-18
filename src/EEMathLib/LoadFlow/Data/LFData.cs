@@ -126,6 +126,9 @@ namespace EEMathLib.LoadFlow.Data
                     BusIndex = 0,
                     ID = "1",
                     BusType = BusTypeEnum.Slack,
+
+                    PTransmitResult = 3.948,
+                    QTransmitResult = 1.144,
                 },
                 new EEBus
                 {
@@ -134,6 +137,9 @@ namespace EEMathLib.LoadFlow.Data
                     BusType = BusTypeEnum.PQ,
                     Pload = 8.0,
                     Qload = 2.8,
+
+                    VoltageResult = 0.834,
+                    AngleResult = -22.407,
                 },
                 new EEBus
                 {
@@ -146,20 +152,32 @@ namespace EEMathLib.LoadFlow.Data
                     Qload = 0.4,
                     Qmin = -2.8,
                     Qmax = 4.0,
+
+                    VoltageResult = 1.05,
+                    AngleResult = -0.597,
+                    QTransmitResult = 3.376 - 0.4,
+                    QgenResult = 3.376,
                 },
                 new EEBus
                 {
                     BusIndex = 3,
                     ID = "4",
                     BusType = BusTypeEnum.PQ,
+
+                    VoltageResult = 1.019,
+                    AngleResult = -2.834,
                 },
                 new EEBus
                 {
                     BusIndex = 4,
                     ID = "5",
                     BusType = BusTypeEnum.PQ,
+
+                    VoltageResult = 0.974,
+                    AngleResult = -4.548,
                 },
             };
+
 
             _Lines = new List<EELine>
             {
@@ -167,93 +185,39 @@ namespace EEMathLib.LoadFlow.Data
                 {
                     FromBusID = "2",
                     ToBusID = "4",
-                    R = 0.009,
-                    X = 0.1,
-                    B = 1.72,
+                    RSeries = 0.009,
+                    XSeries = 0.1,
+                    BShunt = 1.72,
                 },
                 new EELine
                 {
                     FromBusID = "2",
                     ToBusID = "5",
-                    R = 0.0045,
-                    X = 0.05,
-                    B = 0.88,
+                    RSeries = 0.0045,
+                    XSeries = 0.05,
+                    BShunt = 0.88,
                 },
                 new EELine
                 {
                     FromBusID = "4",
                     ToBusID = "5",
-                    R = 0.00225,
-                    X = 0.025,
-                    B = 0.44,
+                    RSeries = 0.00225,
+                    XSeries = 0.025,
+                    BShunt = 0.44,
                 },
                 new EELine
                 {
                     FromBusID = "1",
                     ToBusID = "5",
-                    R = 0.0015,
-                    X = 0.02,
+                    RSeries = 0.0015,
+                    XSeries = 0.02,
                 },
                 new EELine
                 {
                     FromBusID = "3",
                     ToBusID = "4",
-                    R = 0.00075,
-                    X = 0.01,
-                },
-            };
-
-            _LFResult = new List<EEBus>
-            {
-                new EEBus
-                {
-                    BusIndex = 0,
-                    ID = "1",
-                    BusType = BusTypeEnum.Slack,
-                    Voltage = 1.0,
-                    Angle = 0.0,
-                    Pgen = 3.948,
-                    Qgen = 1.144,
-                },
-                new EEBus
-                {
-                    BusIndex = 1,
-                    ID = "2",
-                    BusType = BusTypeEnum.PQ,
-                    Voltage = 0.834,
-                    Angle = -22.407,
-                    Pload = 8.0,
-                    Qload = 2.8,
-                },
-                new EEBus
-                {
-                    BusIndex = 2,
-                    ID = "3",
-                    BusType = BusTypeEnum.PV,
-                    Voltage = 1.05,
-                    Angle = -0.597,
-                    Pgen = 5.2,
-                    Qgen = 3.376,
-                    Pload = 0.8,
-                    Qload = 0.4,
-                    Qmin = -2.8,
-                    Qmax = 4.0,
-                },
-                new EEBus
-                {
-                    BusIndex = 3,
-                    ID = "4",
-                    BusType = BusTypeEnum.PQ,
-                    Voltage = 1.019,
-                    Angle = -2.834,
-                },
-                new EEBus
-                {
-                    BusIndex = 4,
-                    ID = "5",
-                    BusType = BusTypeEnum.PQ,
-                    Voltage = 0.974,
-                    Angle = -4.548,
+                    RSeries = 0.00075,
+                    XSeries = 0.01,
                 },
             };
 

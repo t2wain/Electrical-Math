@@ -1,9 +1,8 @@
 ﻿using EEMathLib.DTO;
 using System.Linq;
 using System.Numerics;
-using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
-using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
+using JCFD = EEMathLib.LoadFlow.NewtonRaphson.JacobianFD;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
@@ -13,11 +12,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     /// </summary>
     public class LFDC : NewtonRaphsonBase
     {
-        override protected Result<BU> Solve(BU buses, MC YMatrix,
+        override public Result<LFResult> Solve(EENetwork network,
             double threshold = double.NaN, int maxIteration = 1)
         {
             var res = new NRResult();
-            var Y = YMatrix;
+            var Y = network.YMatrix;
+            var buses = Initialize(network.Buses);
 
             // Step 1
             // Determine classification of each bus
@@ -25,7 +25,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
             // Step 2
             // Calculate J1 matrix
-            var J1Matrix = JC.CreateJ1(YMatrix, res.NRBuses);
+            var J1Matrix = JCFD.CreateJ1(Y, res.NRBuses);
 
             // Step 3
             // Prepare the matrix of injected power at each bus
@@ -44,10 +44,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 b.BusVoltage = Complex.FromPolarCoordinates(1.0, phase);
             }
 
+            var lfres = CalcResult(network, buses, true);
+
             //return res.NRBuses.AllBuses;
-            return new Result<BU>
+            return new Result<LFResult>
             {
-                Data = buses,
+                Data = lfres,
                 IterationStop = 1,
                 Error = ErrorEnum.NoError,
             };

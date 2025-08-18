@@ -1,6 +1,6 @@
-﻿# Load Flow Algorithm
+﻿# Power Flow Analysis
 
-Load flow analysis is based on the following equations and their derivations:
+Power flow analysis is based on the following equations and their derivations:
 
 - I = V / Z = V * Y
 - S = V * I.conjugate()
@@ -26,7 +26,7 @@ Note, the paramater V, Y, and S are phasor quantity (magnitude, phase) which can
 
 ## Calculation of V, A, P, and Q
 
-The load flow analysis is the calculation of parameters V, A, P, and Q at each bus. The buses in the network are classified according to which parameters are given at such bus
+The power flow analysis is the calculation of parameters V, A, P, and Q at each bus. The buses in the network are classified according to which parameters are given at such bus
 
 - Slack bus (utility bus) : given V = 1.0, A = 0.0, calculate P and Q
 - PV bus (generator bus) : given V and P, calculate A and Q
@@ -34,7 +34,7 @@ The load flow analysis is the calculation of parameters V, A, P, and Q at each b
 
 Thus, at each bus there are two (2) unknown and there are two (2) equations (P and Q).
 
-## Load Flow Algorithms
+## Power Flow Algorithms
 
 There are two basic algorithm of load flow analysis:
 
@@ -61,17 +61,12 @@ Newton-Raphson strength
 Newton-Raphson Fast-Decoupled
 - Require less computer memmory
 - Speed (good)
-- Approximation (better)
-
-Newton-Raphson Fast-Decoupled (Optimized)
-- Require less computer memmory
-- Speed (better)
-- Approximation (better)
+- Approximation
 
 Newton-Raphson DC-Like
 - Require less computer memmory
 - Speed (better)
-- Approximation (good)
+- Approximation
 
 ## Code Design
 

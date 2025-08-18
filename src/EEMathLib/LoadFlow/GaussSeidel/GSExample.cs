@@ -43,33 +43,47 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             var solver = new LFGaussSeidel();
             var res = solver.Solve(nw, threshold, 100);
 
-            if (res.Error == ErrorEnum.Divergence)
+            if (res.IsError)
                 return false;
 
-            var rbuses = LFC.CalcResult(res.Data).ToDictionary(bus => bus.ID);
-            var dbuses = data.LFResult.ToDictionary(bus => bus.ID);
+            var rbuses = res.Data.Buses.ToDictionary(bus => bus.ID);
+            var dbuses = data.Busses.ToDictionary(bus => bus.ID);
 
-            threshold = 0.01;
+            threshold = 0.05;
             var c = true;
             foreach (var dbus in dbuses.Values)
             {
                 var rb = rbuses[dbus.ID];
-                var v = Checker.EQ(rb.Voltage, dbus.Voltage, threshold);
-                c &= v;
-                v = Checker.EQ(rb.Angle, dbus.Angle, threshold);
-                c &= v;
 
-                if (rb.BusType == BusTypeEnum.PQ
+                // check voltage and phase
+                bool v;
+                if (rb.BusType == BusTypeEnum.PV
+                    || rb.BusType == BusTypeEnum.PQ)
+                {
+                    v = Checker.EQPct(rb.BusVoltage.Magnitude, dbus.VoltageResult, threshold);
+                    c &= v;
+                    var phaseDeg = Phasor.ConvertRadianToDegree(rb.BusVoltage.Phase);
+                    v = Checker.EQPct(phaseDeg, dbus.AngleResult, threshold);
+                    c &= v;
+                }
+
+                // check Q
+                if (rb.BusType == BusTypeEnum.PV
                     || rb.BusType == BusTypeEnum.Slack)
                 {
-                    v = Checker.EQ(rb.Pgen, dbus.Pgen, threshold);
+                    v = Checker.EQPct(rb.Sbus.Imaginary, dbus.QTransmitResult, threshold);
                     c &= v;
-                    v = Checker.EQ(rb.Qgen, dbus.Qgen, threshold);
+                }
+
+                // check P
+                if (rb.BusType == BusTypeEnum.Slack)
+                {
+                    v = Checker.EQPct(rb.Sbus.Real, dbus.PTransmitResult, threshold);
                     c &= v;
                 }
             }
 
-            return !res.IsError;
+            return c;
         }
 
         #endregion

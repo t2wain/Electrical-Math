@@ -72,9 +72,9 @@ namespace TestUnit
         }
 
         [Fact]
-        public void Calc_FastDecoupled_LoadFlow_JMatrix_Once()
+        public void Calc_FastDecoupled_LoadFlow_Approximate()
         {
-            var c = NRExample.LFSolve_FastDecoupled_JMatrix_Once(_data);
+            var c = NRExample.LFSolve_FastDecoupled_Approximation(_data);
             Assert.True(c);
         }
 

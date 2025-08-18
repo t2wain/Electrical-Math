@@ -24,11 +24,6 @@ namespace EEMathLib.LoadFlow.Data
         IEnumerable<EELine> Lines { get; }
 
         /// <summary>
-        /// Load flow result for testing
-        /// </summary>
-        IEnumerable<EEBus> LFResult { get; }
-
-        /// <summary>
         /// Y matrix result for testing
         /// </summary>
         MxDTO<Complex> YResult { get; }

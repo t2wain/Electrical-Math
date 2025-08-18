@@ -22,11 +22,32 @@ namespace EEMathLib.LoadFlow.Data
         public string ToBusID { get; set; }
         public EEBus FromBus { get; set; }
         public EEBus ToBus { get; set; }
-        public double R { get; set; }
-        public double X { get; set; }
-        public double G { get; set; }
-        public double B { get; set; }
-        public Complex ZImp => new Complex(R, X);
-        public Complex YImp => new Complex(G, B);
+        /// <summary>
+        /// Line series resistance
+        /// </summary>
+        public double RSeries { get; set; }
+        /// <summary>
+        /// Line series reactance
+        /// </summary>
+        public double XSeries { get; set; }
+        /// <summary>
+        /// Line shunt conductance
+        /// </summary>
+        public double GShunt { get; set; }
+        /// <summary>
+        /// Line shunt susceptance
+        /// </summary>
+        public double BShunt { get; set; }
+        /// <summary>
+        /// Line series Susceptance
+        /// </summary>
+        public Complex ZImpSeries => new Complex(RSeries, XSeries);
+        /// <summary>
+        /// Line shunt admitance
+        /// </summary>
+        public Complex YImpShunt => new Complex(GShunt, BShunt);
+
+        public double PResult { get; set; }
+        public double QResult { get; set; }
     }
 }
