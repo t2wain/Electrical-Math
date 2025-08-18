@@ -39,6 +39,8 @@ namespace EEMathLib.LoadFlow
         /// </summary>
         public Complex Sbus { get; set; }
 
+        public double Qgen { get; set; }
+
         #region Newton-Raphson bus indices
 
         /// <summary>

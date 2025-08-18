@@ -24,7 +24,38 @@ where
 
 Note, the paramater V, Y, and S are phasor quantity (magnitude, phase) which can be converted to complex value as (Real + jImaginary)
 
-## Calculation of V, A, P, and Q
+## Bus data
+
+At each bus, the following data are specified.
+
+For Slack bus:
+- V = 1.0
+- A = 0.0
+
+For PV buses:
+- Pgen
+- QgenMax
+- QgenMin
+- Pload
+- Qload
+
+For PQ buses:
+- Pload
+- Qload
+
+## Power summation at each bus
+
+The power delivered to each bus (Pk and Qk):
+- Pk = Pgenk - Ploadk
+- Qk = Qgenk - Qloadk
+
+The sign (positive or negative) of the values for these parameters indicate the direction of power flow. The standard direction of power flow (positive sign) at each bus are:
+- Pgen/Qgen flow into the bus
+- Pload/Qload flow out of bus : expecting inductive Qload
+- Pk/Qk flow out of bus
+
+
+## Calculation of V, A, P, and Q at each bus
 
 The power flow analysis is the calculation of parameters V, A, P, and Q at each bus. The buses in the network are classified according to which parameters are given at such bus
 
@@ -32,7 +63,11 @@ The power flow analysis is the calculation of parameters V, A, P, and Q at each 
 - PV bus (generator bus) : given V and P, calculate A and Q
 - PQ bus (load bus) : given P and Q, calculate V and A
 
-Thus, at each bus there are two (2) unknown and there are two (2) equations (P and Q).
+Once V and A are calculated for each bus, then the power flow for each line is calculated:
+- Pline/Qline = f(Vfrom, Vto, Zline, Yline)
+- Zline is the line series impedance
+- Yline is the shunt admittance
+- The sign value of Pline/Qline indicate the direction of power flow
 
 ## Power Flow Algorithms
 

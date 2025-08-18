@@ -1,5 +1,4 @@
-﻿using EEMathLib.DTO;
-using EEMathLib.LoadFlow.Data;
+﻿using EEMathLib.LoadFlow.Data;
 using System.Linq;
 using LFC = EEMathLib.LoadFlow.LFCommon;
 using LFGS = EEMathLib.LoadFlow.GaussSeidel.LFGaussSeidel;
@@ -46,43 +45,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             if (res.IsError)
                 return false;
 
-            var rbuses = res.Data.Buses.ToDictionary(bus => bus.ID);
-            var dbuses = data.Busses.ToDictionary(bus => bus.ID);
-
-            threshold = 0.05;
-            var c = true;
-            foreach (var dbus in dbuses.Values)
-            {
-                var rb = rbuses[dbus.ID];
-
-                // check voltage and phase
-                bool v;
-                if (rb.BusType == BusTypeEnum.PV
-                    || rb.BusType == BusTypeEnum.PQ)
-                {
-                    v = Checker.EQPct(rb.BusVoltage.Magnitude, dbus.VoltageResult, threshold);
-                    c &= v;
-                    var phaseDeg = Phasor.ConvertRadianToDegree(rb.BusVoltage.Phase);
-                    v = Checker.EQPct(phaseDeg, dbus.AngleResult, threshold);
-                    c &= v;
-                }
-
-                // check Q
-                if (rb.BusType == BusTypeEnum.PV
-                    || rb.BusType == BusTypeEnum.Slack)
-                {
-                    v = Checker.EQPct(rb.Sbus.Imaginary, dbus.QTransmitResult, threshold);
-                    c &= v;
-                }
-
-                // check P
-                if (rb.BusType == BusTypeEnum.Slack)
-                {
-                    v = Checker.EQPct(rb.Sbus.Real, dbus.PTransmitResult, threshold);
-                    c &= v;
-                }
-            }
-
+            var c = LFC.ValidateLFResult(nw, res.Data, 0.05) ;
             return c;
         }
 

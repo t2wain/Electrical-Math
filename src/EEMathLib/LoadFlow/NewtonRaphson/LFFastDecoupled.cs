@@ -19,6 +19,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// <returns></returns>
         internal override NRResult InitResult(NRResult curRes)
         {
+            // retain J1 and J2 matrices
             var nrRes = new NRResult
             {
                 Iteration = curRes.Iteration,
@@ -27,6 +28,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 J4Matrix = curRes.J4Matrix,
                 J4LUMatrix = curRes.J4LUMatrix,
             };
+
+            // Some PV buses change status
+            // and so will need to re-calculate J4
             if (curRes.PVBusStatusChanged)
             {
                 nrRes.J4Matrix = null;
@@ -38,6 +42,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         override internal void CalcJMatrix(MC YMatrix, NRResult nrRes)
         {
+            // re-use J1 and J4 matrices
             if (nrRes.J1Matrix == null)
             {
                 nrRes.J1Matrix = JCFD.CreateJ1(YMatrix, nrRes.NRBuses);

@@ -127,8 +127,8 @@ namespace EEMathLib.LoadFlow.Data
                     ID = "1",
                     BusType = BusTypeEnum.Slack,
 
-                    PTransmitResult = 3.948,
-                    QTransmitResult = 1.144,
+                    PResult = 3.948,
+                    QResult = 1.144,
                 },
                 new EEBus
                 {
@@ -155,7 +155,7 @@ namespace EEMathLib.LoadFlow.Data
 
                     VoltageResult = 1.05,
                     AngleResult = -0.597,
-                    QTransmitResult = 3.376 - 0.4,
+                    QResult = 3.376 - 0.4,
                     QgenResult = 3.376,
                 },
                 new EEBus
@@ -178,35 +178,57 @@ namespace EEMathLib.LoadFlow.Data
                 },
             };
 
-
             _Lines = new List<EELine>
             {
                 new EELine
                 {
+                    ID = "L1",
+                    LineType = LineTypeEnum.Line,
                     FromBusID = "2",
                     ToBusID = "4",
                     RSeries = 0.009,
                     XSeries = 0.1,
                     BShunt = 1.72,
+
+                    PResult = -2.920,
+                    QResult = -1.392,
+                    PResultReverse = 3.036,
+                    QResultReverse = 1.216,
                 },
                 new EELine
                 {
+                    ID = "L2",
+                    LineType = LineTypeEnum.Line,
                     FromBusID = "2",
                     ToBusID = "5",
                     RSeries = 0.0045,
                     XSeries = 0.05,
                     BShunt = 0.88,
+
+                    PResult = -5.080,
+                    QResult = -1.408,
+                    PResultReverse = 5.256,
+                    QResultReverse = 2.632,
                 },
                 new EELine
                 {
+                    ID = "L3",
                     FromBusID = "4",
+                    LineType = LineTypeEnum.Line,
                     ToBusID = "5",
                     RSeries = 0.00225,
                     XSeries = 0.025,
                     BShunt = 0.44,
+
+                    PResult = 1.344,
+                    QResult = 1.504,
+                    PResultReverse = -1.332,
+                    QResultReverse = -1.824,
                 },
                 new EELine
                 {
+                    ID = "T1",
+                    LineType = LineTypeEnum.Transformer,
                     FromBusID = "1",
                     ToBusID = "5",
                     RSeries = 0.0015,
@@ -214,6 +236,8 @@ namespace EEMathLib.LoadFlow.Data
                 },
                 new EELine
                 {
+                    ID = "T2",
+                    LineType = LineTypeEnum.Transformer,
                     FromBusID = "3",
                     ToBusID = "4",
                     RSeries = 0.00075,

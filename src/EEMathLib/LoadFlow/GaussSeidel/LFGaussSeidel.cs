@@ -124,10 +124,11 @@ namespace EEMathLib.LoadFlow.GaussSeidel
                 {
                     // calculate Qk
                     var sk = LFC.CalcPower(bus, Y, buses);
-                    var (snxt, bt) = LFC.CalcMaxQk(bus, sk);
+                    var (snxt, bt, qgen) = LFC.CalcMaxQk(bus, sk);
                     bus.BusType = bt;
                     // update Sbus
                     bus.Sbus = snxt;
+                    bus.Qgen = qgen;
                     bus.BusType = bt;
 
                     // calculate Vbus

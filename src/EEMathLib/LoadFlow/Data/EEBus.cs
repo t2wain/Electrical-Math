@@ -40,7 +40,7 @@
         public double VoltageResult { get; set; }
         public double AngleResult { get; set; }
         public double QgenResult { get; set; }
-        public double PTransmitResult { get; set; }
-        public double QTransmitResult { get; set; }
+        public double PResult { get; set; }
+        public double QResult { get; set; }
     }
 }

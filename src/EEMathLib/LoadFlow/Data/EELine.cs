@@ -47,7 +47,10 @@ namespace EEMathLib.LoadFlow.Data
         /// </summary>
         public Complex YImpShunt => new Complex(GShunt, BShunt);
 
-        public double PResult { get; set; }
-        public double QResult { get; set; }
+        public double? PResult { get; set; }
+        public double? QResult { get; set; }
+
+        public double? PResultReverse { get; set; }
+        public double? QResultReverse { get; set; }
     }
 }

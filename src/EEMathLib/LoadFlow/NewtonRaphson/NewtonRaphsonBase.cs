@@ -236,7 +236,8 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 var dQ = nrRes.PQDelta[b.Qidx + pcnt, 0];
                 var dPQ = new Complex(dP, dQ);
                 var sk = b.Sbus + dPQ;
-                var (snxt, bt) = LFC.CalcMaxQk(b, sk);
+                var (snxt, bt, qgen) = LFC.CalcMaxQk(b, sk);
+                b.Qgen = qgen;
                 b.Sbus = snxt;
                 // Determine if PV bus should be
                 // switched to PQ bus or back to PV bus
