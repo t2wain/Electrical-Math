@@ -12,5 +12,7 @@ namespace EEMathLib.LoadFlow
         public Complex SLineReverse { get; set; }
         public double PReverse { get; set; }
         public double QReverse { get; set; }
+        public double I { get; set; }
+        public double IReverse { get; set; }
     }
 }

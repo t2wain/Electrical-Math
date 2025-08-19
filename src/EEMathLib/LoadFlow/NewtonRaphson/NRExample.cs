@@ -3,6 +3,7 @@ using EEMathLib.MatrixMath;
 using System.Linq;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
+using LFC = EEMathLib.LoadFlow.LFCommon;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
@@ -94,7 +95,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                     JMatrix = nrData.JMatrix, 
                     NRBuses = nrData.NRBuses
                 };
-                nrRes = NRValidator.LFIterate(YMatrix, nrRes, 7);
+                nrRes = NRValidator.LFIterate(YMatrix, nrRes, 5);
                 nrRes.Iteration = 1;
                 v = NRValidator.Validate_AVDelta(nrRes, data);
                 c &= v;
@@ -158,7 +159,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         #region Solve
 
-        public static bool LFSolve(ILFData data)
+        public static bool LFSolve(ILFData data, bool validate = false)
         {
 
             var nw = data.CreateNetwork();
@@ -167,7 +168,14 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             var solver = new LFNR();
             var res = solver.Solve(nw, threshold, 50);
 
-            return !res.IsError;
+            if (res.IsError)
+                return false;
+
+            if (!validate)
+                return true;
+
+            var c = LFC.ValidateLFResult(nw, res.Data, 0.05);
+            return c;
         }
 
         public static bool LFSolve_FastDecoupled(ILFData data)

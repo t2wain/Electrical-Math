@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using static EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 using LFC = EEMathLib.LoadFlow.LFCommon;
@@ -19,13 +18,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     public abstract class NewtonRaphsonBase : ILFSolver
     {
         #region Solve
-
-        ///// <summary>
-        ///// Calculate ewton-Raphson load flow
-        ///// </summary>
-        //public virtual Result<BU> Solve(EENetwork network,
-        //    double threshold = 0.015, int maxIteration = 20) =>
-        //    Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration);
 
         /// <summary>
         /// Calculate Newton-Raphson load flow
@@ -69,7 +61,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
 
             // Calculate Pk, Qk for slack bus
-            nrRes.NRBuses.SlackBus.Sbus = LFC.CalcPower(nrRes.NRBuses.SlackBus, Y, buses);
+            nrRes.NRBuses.SlackBus.Sbus = LFC.CalcBusPower(nrRes.NRBuses.SlackBus, Y, buses);
 
             // Prepare solution result
             var lfrres = CalcResult(network, buses, nrRes.IsSolution);
@@ -92,11 +84,16 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// <returns>All calculated values for an iteration</returns>
         internal void Iterate(NRResult nrRes, BU buses, MC YMatrix, double threshold = 0.0001)
         {
-            //var res = InitResult(prevRes);
             var Y = YMatrix;
 
-            // Step 1
             // Determine classification of each bus
+            nrRes.NRBuses = JC.ReIndexBusPQ(buses);
+
+            // Step 1
+            UpdatePVBusStatus(YMatrix, nrRes);
+
+            // Determine classification of each bus
+            // PV bus classification might have changed in step 3
             nrRes.NRBuses = JC.ReIndexBusPQ(buses);
 
             // Step 2
@@ -106,24 +103,14 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 return;
 
             // Step 3
-            UpdatePVBusStatus(nrRes);
-
-            // Step 4
-            // Determine classification of each bus
-            // PV bus classification might have changed in step 3
-            nrRes.NRBuses = JC.ReIndexBusPQ(buses);
-
-            // Step 5
             // Calculate Jacobian matrix
             CalcJMatrix(Y, nrRes);
 
-            // Step 6
+            // Step 4
             CalcAVDelta(nrRes);
 
-            // Step 7
+            // Step 5
             UpdateBusAV(nrRes);
-
-            //return res;
         }
 
         #endregion
@@ -186,15 +173,15 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             nrRes.PQDelta = mx;
             foreach (var bk in buses)
             {
-                var sk = LFC.CalcPower(bk, Y, nrBuses.AllBuses);
-                nrRes.PCal[bk.Pidx] = sk.Real; // save dP
+                var sk = LFC.CalcBusPower(bk, Y, nrBuses.AllBuses);
+                nrRes.PCal[bk.Pidx] = sk.Real; // save P Calc
 
                 var pdk = bk.Sbus.Real - sk.Real;
                 mx[bk.Pidx, 0] = pdk; // save dP to DeltaPQ
 
                 if (bk.BusType == BusTypeEnum.PQ)
                 {
-                    nrRes.QCal[bk.Qidx] = sk.Imaginary; // save dQ calc
+                    nrRes.QCal[bk.Qidx] = sk.Imaginary; // save Q calc
                     var qdk = bk.Sbus.Imaginary - sk.Imaginary;
                     mx[bk.Qidx + pcnt, 0] = qdk; // save dQ to DeltaPQ
                 }
@@ -214,31 +201,27 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return res.IsSolution;
         }
 
-        internal static void UpdatePVBusStatus(JC.NRBuses nrBuses, MD mxPQDelta)
+        internal static void UpdatePVBusStatus(MC YMatrix, JC.NRBuses nrBuses, MD mxPQDelta)
         {
             var nrRes = new NRResult
             {
                 NRBuses = nrBuses,
                 PQDelta = mxPQDelta
             };
-            UpdatePVBusStatus(nrRes);
+            UpdatePVBusStatus(YMatrix, nrRes);
         }
 
         /// <summary>
         /// Calculation step for each iteration
         /// </summary>
-        internal static void UpdatePVBusStatus(NRResult nrRes)
+        internal static void UpdatePVBusStatus(MC YMatrix, NRResult nrRes)
         {
-            var pcnt = nrRes.NRBuses.J1Size.Row;
             foreach (var b in nrRes.NRBuses.AllPVBuses)
             {
-                var dP = nrRes.PQDelta[b.Pidx, 0];
-                var dQ = nrRes.PQDelta[b.Qidx + pcnt, 0];
-                var dPQ = new Complex(dP, dQ);
-                var sk = b.Sbus + dPQ;
+                var sk = LFC.CalcBusPower(b, YMatrix, nrRes.NRBuses.AllBuses);
                 var (snxt, bt, qgen) = LFC.CalcMaxQk(b, sk);
                 b.Qgen = qgen;
-                b.Sbus = snxt;
+                b.Sbus = snxt; // save Sbus
                 // Determine if PV bus should be
                 // switched to PQ bus or back to PV bus
                 var statusChanged = b.BusType != bt;
@@ -325,7 +308,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             // Calculate power flow in lines
             IEnumerable<LineResult> lineRes = null;
             if (isSolution)
-                lineRes = LFC.CalcPower(network.Lines, buses);
+                lineRes = LFC.CalcLinePower(network.Lines, buses);
 
             // Prepare solution result
             var lfrres = new LFResult { Buses = buses, Lines = lineRes };

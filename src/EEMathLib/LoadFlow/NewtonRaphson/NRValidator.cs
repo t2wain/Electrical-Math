@@ -38,7 +38,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             res.Iteration = data.Iteration;
             var Y = YMatrix;
 
+            // Determine classification of each bus
+            res.NRBuses = JC.ReIndexBusPQ(data.NRBuses.AllBuses);
+
             // Step 1
+            LFNR.UpdatePVBusStatus(Y, res);
+
             // Determine classification of each bus
             res.NRBuses = JC.ReIndexBusPQ(data.NRBuses.AllBuses);
 
@@ -54,9 +59,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
             else LFNR.CalcDeltaPQ(Y, res); // delta P and Q
 
-            if (steps <= 2)
-                return res;
-
             res.MaxErr = res.PQDelta
                 .ToColumnMajorArray()
                 .Select(v => Math.Abs(v))
@@ -68,36 +70,25 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 return res;
             }
 
+            if (steps <= 2)
+                return res;
+
             // Step 3
-            LFNR.UpdatePVBusStatus(res);
-
-            if (steps <= 3)
-                return res;
-
-            // Step 4
-            // Determine classification of each bus
-            // PV bus classification might have changed in step 3
-            res.NRBuses = JC.ReIndexBusPQ(data.NRBuses.AllBuses);
-
-            if (steps <= 4)
-                return res;
-
-            // Step 5
             // Calculate Jacobian matrix
             if (data.JMatrix != null)
                 res.JMatrix = data.JMatrix;
             else res.JMatrix = JC.CreateJMatrix(Y, res.NRBuses);
 
-            if (steps <= 5)
+            if (steps <= 3)
                 return res;
 
-            // Step 6
+            // Step 4
             solver.CalcAVDelta(res);
 
-            if (steps <= 6)
+            if (steps <= 4)
                 return res;
 
-            // Step 7
+            // Step 5
             LFNR.UpdateBusAV(res);
 
             return res;

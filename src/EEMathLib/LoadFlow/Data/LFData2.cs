@@ -225,6 +225,9 @@ namespace EEMathLib.LoadFlow.Data
                     ID = "1",
                     Voltage = 1.0,
                     BusType = BusTypeEnum.Slack,
+
+                    PResult = 0.56743,
+                    QResult = 0.26505,
                 },
                 new EEBus
                 {
@@ -235,6 +238,11 @@ namespace EEMathLib.LoadFlow.Data
                     Pgen = 50 / _BaseMVA,
                     Qmin = -500 / _BaseMVA,
                     Qmax = 500 / _BaseMVA,
+
+                    VoltageResult = 1.0,
+                    AngleResult = 1.65757,
+                    QResult = -0.18519,
+                    QgenResult = -0.18519,
                 },
                 new EEBus
                 {
@@ -245,6 +253,11 @@ namespace EEMathLib.LoadFlow.Data
                     Pgen = 100 / _BaseMVA,
                     Qmin = -500 / _BaseMVA,
                     Qmax = 500 / _BaseMVA,
+
+                    VoltageResult = 1.0,
+                    AngleResult = -0.91206,
+                    QResult = 0.68875,
+                    QgenResult = 0.68875,
                 },
                 new EEBus
                 {
@@ -253,6 +266,9 @@ namespace EEMathLib.LoadFlow.Data
                     BusType = BusTypeEnum.PQ,
                     Pload = 115 / _BaseMVA,
                     Qload = 60 / _BaseMVA,
+
+                    VoltageResult = 0.90597,
+                    AngleResult = -8.35088,
                 },
                 new EEBus
                 {
@@ -261,6 +277,9 @@ namespace EEMathLib.LoadFlow.Data
                     BusType = BusTypeEnum.PQ,
                     Pload = 85 / _BaseMVA,
                     Qload = 40 / _BaseMVA,
+
+                    VoltageResult = 0.94397,
+                    AngleResult = -5.02735,
                 },
             };
 
@@ -268,7 +287,8 @@ namespace EEMathLib.LoadFlow.Data
             {
                 new EELine
                 {
-                    ID = "1",
+                    ID = "L1",
+                    LineType = LineTypeEnum.Line,
                     FromBusID = "1",
                     ToBusID = "2",
                     RSeries = 0.042,
@@ -277,7 +297,8 @@ namespace EEMathLib.LoadFlow.Data
                 },
                 new EELine
                 {
-                    ID = "2",
+                    ID = "L2",
+                    LineType = LineTypeEnum.Line,
                     FromBusID = "1",
                     ToBusID = "5",
                     RSeries = 0.031,
@@ -286,7 +307,8 @@ namespace EEMathLib.LoadFlow.Data
                 },
                 new EELine
                 {
-                    ID = "3",
+                    ID = "L3",
+                    LineType = LineTypeEnum.Line,
                     FromBusID = "2",
                     ToBusID = "3",
                     RSeries = 0.031,
@@ -295,7 +317,8 @@ namespace EEMathLib.LoadFlow.Data
                 },
                 new EELine
                 {
-                    ID = "4",
+                    ID = "L4",
+                    LineType = LineTypeEnum.Line,
                     FromBusID = "3",
                     ToBusID = "4",
                     RSeries = 0.031,
@@ -304,7 +327,8 @@ namespace EEMathLib.LoadFlow.Data
                 },
                 new EELine
                 {
-                    ID = "5",
+                    ID = "L5",
+                    LineType = LineTypeEnum.Line,
                     FromBusID = "3",
                     ToBusID = "5",
                     RSeries = 0.053,
@@ -313,7 +337,8 @@ namespace EEMathLib.LoadFlow.Data
                 },
                 new EELine
                 {
-                    ID = "6",
+                    ID = "L6",
+                    LineType = LineTypeEnum.Line,
                     FromBusID = "4",
                     ToBusID = "5",
                     RSeries = 0.063,

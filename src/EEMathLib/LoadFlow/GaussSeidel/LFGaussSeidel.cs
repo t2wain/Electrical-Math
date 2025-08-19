@@ -17,13 +17,6 @@ namespace EEMathLib.LoadFlow.GaussSeidel
     {
         #region Solve
 
-        ///// <summary>
-        ///// Calculate load flow
-        ///// </summary>
-        //public Result<LFResult> Solve(EENetwork network,
-        //    double threshold = 0.0001, int maxIteration = 100) =>
-        //    Solve(Initialize(network.Buses), network.YMatrix, threshold, maxIteration);
-
         /// <summary>
         /// Calculate load flow
         /// </summary>
@@ -74,12 +67,12 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             #endregion
 
             // Calculate Pk, Qk for slack bus
-            slackBus.Sbus = LFC.CalcPower(slackBus, Y, buses);
+            slackBus.Sbus = LFC.CalcBusPower(slackBus, Y, buses);
 
             // Calculate power flow in lines
             IEnumerable<LineResult> lineRes = null;
             if (res.IsSolution)
-                lineRes = LFC.CalcPower(network.Lines, buses);
+                lineRes = LFC.CalcLinePower(network.Lines, buses);
 
             // Prepare solution result
             var lfrres = new LFResult { Buses = buses, Lines = lineRes };
@@ -110,7 +103,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
                 // load bus
                 if (bus.BusData.BusType == BusTypeEnum.PQ)
                 {
-                    var vnxt = LFC.CalcVoltage(bus, Y, buses);
+                    var vnxt = LFC.CalcBusVoltage(bus, Y, buses);
                     res.ABus[bus.BusIndex] = vnxt.Phase;
                     res.VBus[bus.BusIndex] = vnxt.Magnitude;
                     UpdateErr(res, bus.BusVoltage, vnxt);
@@ -123,7 +116,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
                 else if (bus.BusData.BusType == BusTypeEnum.PV)
                 {
                     // calculate Qk
-                    var sk = LFC.CalcPower(bus, Y, buses);
+                    var sk = LFC.CalcBusPower(bus, Y, buses);
                     var (snxt, bt, qgen) = LFC.CalcMaxQk(bus, sk);
                     bus.BusType = bt;
                     // update Sbus
@@ -132,7 +125,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
                     bus.BusType = bt;
 
                     // calculate Vbus
-                    var vnxt = LFC.CalcVoltage(bus, Y, buses);
+                    var vnxt = LFC.CalcBusVoltage(bus, Y, buses);
                     //bus.UpdateAErr(bus.BusVoltage.Phase, vnxt.Phase, i);
 
                     if (bt == BusTypeEnum.PV)

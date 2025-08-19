@@ -12,7 +12,7 @@ namespace TestUnit
 
         public JacobianTest(Context ctx)
         {
-            _data = ctx.LoadFlowData;
+            _data = ctx.LoadFlowData1;
         }
 
         [Fact]

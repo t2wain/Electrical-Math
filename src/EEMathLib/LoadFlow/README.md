@@ -33,6 +33,7 @@ For Slack bus:
 - A = 0.0
 
 For PV buses:
+- V
 - Pgen
 - QgenMax
 - QgenMin

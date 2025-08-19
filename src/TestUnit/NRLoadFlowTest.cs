@@ -1,5 +1,4 @@
-﻿using EEMathLib.LoadFlow.Data;
-using EEMathLib.LoadFlow.NewtonRaphson;
+﻿using EEMathLib.LoadFlow.NewtonRaphson;
 
 namespace TestUnit
 {
@@ -12,27 +11,19 @@ namespace TestUnit
             this._ctx = ctx;
         }
 
-
         [Fact]
         public void Calc_PQDelta_Partial_LFData()
         {
-            var c = NRExample.Calc_PQDelta_Partial(_ctx.LoadFlowData);
+            var c = NRExample.Calc_PQDelta_Partial(_ctx.LoadFlowData1);
             Assert.True(c);
         }
 
         [Fact]
         public void Calc_LoadFlow()
         {
-            var c = NRExample.LFSolve(_ctx.LoadFlowData);
+            var c = NRExample.LFSolve(_ctx.LoadFlowData1Y, true);
             Assert.True(c);
         }
-
-        //[Fact]
-        //public void Calc_FastDecoupled_LoadFlow()
-        //{
-        //    var c = NRExample.LFSolve_FastDecoupled(_ctx.LoadFlowData);
-        //    Assert.True(c);
-        //}
 
     }
 }

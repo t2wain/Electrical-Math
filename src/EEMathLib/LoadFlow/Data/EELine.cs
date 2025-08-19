@@ -52,5 +52,8 @@ namespace EEMathLib.LoadFlow.Data
 
         public double? PResultReverse { get; set; }
         public double? QResultReverse { get; set; }
+
+        public double? IResult { get; set; }
+        public double? IResultReverse { get; set; }
     }
 }

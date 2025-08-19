@@ -11,7 +11,6 @@ namespace EEMathLib.LoadFlow.GaussSeidel
     /// </summary>
     public static class GSExample
     {
-        #region Gauss-Seidel examples
 
         /// <summary>
         /// Calculate bus "2" voltage at iteration 1.
@@ -21,7 +20,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             var nw = data.CreateNetwork();
             var buses = LFGS.Initialize(nw.Buses);
             var bus = buses.FirstOrDefault(b => b.ID == "2");
-            var v = LFC.CalcVoltage(bus, nw.YMatrix, buses);
+            var v = LFC.CalcBusVoltage(bus, nw.YMatrix, buses);
 
             var v2 = new Phasor(0.8746, -15.675);
             var e2 = (Phasor)v;
@@ -34,7 +33,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
         /// <summary>
         /// Solve load flow using Gauss-Seidel method.
         /// </summary>
-        public static bool Solve(ILFData data)
+        public static bool Solve(ILFData data, bool validate = false)
         {
             var nw = data.CreateNetwork();
             var threshold = 0.0001;
@@ -45,10 +44,11 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             if (res.IsError)
                 return false;
 
+            if (!validate)
+                return true;
+
             var c = LFC.ValidateLFResult(nw, res.Data, 0.05) ;
             return c;
         }
-
-        #endregion
     }
 }

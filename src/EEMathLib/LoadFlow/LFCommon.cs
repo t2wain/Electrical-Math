@@ -1,11 +1,9 @@
 ﻿using EEMathLib.LoadFlow.Data;
 using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using static EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 
 namespace EEMathLib.LoadFlow
 {
@@ -15,7 +13,7 @@ namespace EEMathLib.LoadFlow
         /// Calculate Vk, Ak given Pk, Qk for bus k.
         /// </summary>
         /// <returns>Voltage Sk</returns>
-        public static Complex CalcVoltage(BusResult bus, Matrix<Complex> Y, IEnumerable<BusResult> buses)
+        public static Complex CalcBusVoltage(BusResult bus, Matrix<Complex> Y, IEnumerable<BusResult> buses)
         {
             var k = bus.BusIndex;
             var yk = Y[k, k];
@@ -39,10 +37,10 @@ namespace EEMathLib.LoadFlow
         }
 
         /// <summary>
-        /// Calculate Sk for bus k.
+        /// Calculate Sk deliver to bus k.
         /// </summary>
         /// <returns>Apparent power Sk</returns>
-        public static Complex CalcPower(BusResult bus, Matrix<Complex> Y, IEnumerable<BusResult> buses)
+        public static Complex CalcBusPower(BusResult bus, Matrix<Complex> Y, IEnumerable<BusResult> buses)
         {
             var vk = bus.BusVoltage; // given bus voltage
             var vkIdx = bus.BusData.BusIndex;
@@ -59,11 +57,14 @@ namespace EEMathLib.LoadFlow
             return sk;
         }
 
-        public static IEnumerable<LineResult> CalcPower(IEnumerable<EELine> lines, IEnumerable<BusResult> buses)
+        /// <summary>
+        /// Calculate power flow through line
+        /// </summary>
+        public static IEnumerable<LineResult> CalcLinePower(IEnumerable<EELine> lines, IEnumerable<BusResult> buses)
         {
             var dbuses = buses.ToDictionary(b => b.ID);
             var lst = lines
-                .Select(l => new { Line = l, S = CalcPower(l, dbuses), SRev = CalcPower(l, dbuses, true) })
+                .Select(l => new { Line = l, S = CalcLinePower(l, dbuses), SRev = CalcLinePower(l, dbuses, true) })
                 .Select(o => new LineResult 
                 {
                     LineData = o.Line,
@@ -77,7 +78,10 @@ namespace EEMathLib.LoadFlow
             return lst;
         }
 
-        public static Complex CalcPower(EELine line, IDictionary<string, BusResult> buses, bool isReverse = false)
+        /// <summary>
+        /// Calculate power flow through line
+        /// </summary>
+        public static Complex CalcLinePower(EELine line, IDictionary<string, BusResult> buses, bool isReverse = false)
         {
             Complex vi, vj;
             if (isReverse)

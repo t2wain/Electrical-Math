@@ -5,11 +5,13 @@ namespace TestUnit
 {
     public class NRLoadFlowTest2 : IClassFixture<Context>
     {
-        LFData2 _data;
+        LFData2 _data2;
+        Context _ctx;
 
         public NRLoadFlowTest2(Context ctx)
         {
-            _data = ctx.LoadFlowData2;
+            _data2 = ctx.LoadFlowData2;
+            _ctx = ctx; 
         }
 
         #region PQ
@@ -17,14 +19,14 @@ namespace TestUnit
         [Fact]
         public void Calc_PQ_Iteration_0()
         {
-            var c = NRExample.Calc_Iteration(_data, 0);
+            var c = NRExample.Calc_Iteration(_data2, 0);
             Assert.True(c);
         }
 
         [Fact]
         public void Calc_PQ_Iteration_1()
         {
-            var c = NRExample.Calc_Iteration(_data, 1);
+            var c = NRExample.Calc_Iteration(_data2, 1);
             Assert.True(c);
         }
 
@@ -35,21 +37,21 @@ namespace TestUnit
         [Fact]
         public void Calc_Iteration_1()
         {
-            var c = NRExample.Calc_Iteration(_data, 1);
+            var c = NRExample.Calc_Iteration(_data2, 1);
             Assert.True(c);
         }
 
         [Fact]
         public void Calc_Iteration_2()
         {
-            var c = NRExample.Calc_Iteration(_data, 2);
+            var c = NRExample.Calc_Iteration(_data2, 2);
             Assert.True(c);
         }
 
         [Fact]
         public void Calc_Iteration_3()
         {
-            var c = NRExample.Calc_Iteration(_data, 3);
+            var c = NRExample.Calc_Iteration(_data2, 3);
             Assert.True(c);
         }
 
@@ -60,28 +62,36 @@ namespace TestUnit
         [Fact]
         public void Calc_LoadFlow()
         {
-            var c = NRExample.LFSolve(_data);
+            var c = NRExample.LFSolve(_data2, false);
+            Assert.True(c);
+        }
+
+        [Fact]
+        public void Calc_LoadFlow_YData()
+        {
+            var data2Y = _ctx.LoadFlowData2Y;
+            var c = NRExample.LFSolve(data2Y, true);
             Assert.True(c);
         }
 
         [Fact]
         public void Calc_FastDecoupled_LoadFlow()
         {
-            var c = NRExample.LFSolve_FastDecoupled(_data);
+            var c = NRExample.LFSolve_FastDecoupled(_data2);
             Assert.True(c);
         }
 
         [Fact]
         public void Calc_FastDecoupled_LoadFlow_Approximate()
         {
-            var c = NRExample.LFSolve_FastDecoupled_Approximation(_data);
+            var c = NRExample.LFSolve_FastDecoupled_Approximation(_data2);
             Assert.True(c);
         }
 
         [Fact]
         public void Calc_FastDecoupled_DCLike_LoadFlow()
         {
-            var c = NRExample.LFSolve_DCLike(_data);
+            var c = NRExample.LFSolve_DCLike(_data2);
             Assert.True(c);
         }
 
