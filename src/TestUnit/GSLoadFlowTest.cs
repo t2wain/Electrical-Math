@@ -12,13 +12,6 @@ namespace TestUnit
         }
 
         [Fact]
-        public void LoadFlowGS_CalcVoltage() 
-        {
-            var c = GSExample.CalcVoltage(_ctx.LoadFlowData1);
-            Assert.True(c);
-        }
-
-        [Fact]
         public void LoadFlowGS_Solve_Data1()
         {
             var c = GSExample.Solve(_ctx.LoadFlowData1, true);

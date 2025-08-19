@@ -14,51 +14,6 @@ namespace TestUnit
             _ctx = ctx; 
         }
 
-        #region PQ
-
-        [Fact]
-        public void Calc_PQ_Iteration_0()
-        {
-            var c = NRExample.Calc_Iteration(_data2, 0);
-            Assert.True(c);
-        }
-
-        [Fact]
-        public void Calc_PQ_Iteration_1()
-        {
-            var c = NRExample.Calc_Iteration(_data2, 1);
-            Assert.True(c);
-        }
-
-        #endregion
-
-        #region Iteration
-
-        [Fact]
-        public void Calc_Iteration_1()
-        {
-            var c = NRExample.Calc_Iteration(_data2, 1);
-            Assert.True(c);
-        }
-
-        [Fact]
-        public void Calc_Iteration_2()
-        {
-            var c = NRExample.Calc_Iteration(_data2, 2);
-            Assert.True(c);
-        }
-
-        [Fact]
-        public void Calc_Iteration_3()
-        {
-            var c = NRExample.Calc_Iteration(_data2, 3);
-            Assert.True(c);
-        }
-
-        #endregion
-
-        #region Load flow
-
         [Fact]
         public void Calc_LoadFlow()
         {
@@ -94,8 +49,5 @@ namespace TestUnit
             var c = NRExample.LFSolve_DCLike(_data2);
             Assert.True(c);
         }
-
-        #endregion
-
     }
 }

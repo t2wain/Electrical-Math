@@ -42,15 +42,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             res.NRBuses = JC.ReIndexBusPQ(data.NRBuses.AllBuses);
 
             // Step 1
-            LFNR.UpdatePVBusStatus(Y, res);
-
-            // Determine classification of each bus
-            res.NRBuses = JC.ReIndexBusPQ(data.NRBuses.AllBuses);
-
-            if (steps <= 1)
-                return res;
-
-            // Step 2
             if (data.PQDelta != null)
             {
                 res.PQDelta = data.PQDelta;
@@ -70,26 +61,32 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 return res;
             }
 
-            if (steps <= 2)
+            if (steps <= 1)
                 return res;
 
-            // Step 3
+            // Step 2
             // Calculate Jacobian matrix
             if (data.JMatrix != null)
                 res.JMatrix = data.JMatrix;
             else res.JMatrix = JC.CreateJMatrix(Y, res.NRBuses);
 
+            if (steps <= 2)
+                return res;
+
+            // Step 3
+            solver.CalcAVDelta(res);
+
             if (steps <= 3)
                 return res;
 
             // Step 4
-            solver.CalcAVDelta(res);
+            LFNR.UpdateBusAV(res);
 
             if (steps <= 4)
                 return res;
 
             // Step 5
-            LFNR.UpdateBusAV(res);
+            LFNR.UpdatePVBusStatus(Y, res);
 
             return res;
         }

@@ -90,27 +90,23 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             nrRes.NRBuses = JC.ReIndexBusPQ(buses);
 
             // Step 1
-            UpdatePVBusStatus(YMatrix, nrRes);
-
-            // Determine classification of each bus
-            // PV bus classification might have changed in step 3
-            nrRes.NRBuses = JC.ReIndexBusPQ(buses);
-
-            // Step 2
             CalcDeltaPQ(Y, nrRes); // delta P and Q
 
             if (CheckSolution(nrRes, threshold))
                 return;
 
-            // Step 3
+            // Step 2
             // Calculate Jacobian matrix
             CalcJMatrix(Y, nrRes);
 
-            // Step 4
+            // Step 3
             CalcAVDelta(nrRes);
 
-            // Step 5
+            // Step 4
             UpdateBusAV(nrRes);
+
+            // Step 5
+            UpdatePVBusStatus(YMatrix, nrRes);
         }
 
         #endregion
@@ -220,14 +216,14 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             {
                 var sk = LFC.CalcBusPower(b, YMatrix, nrRes.NRBuses.AllBuses);
                 var (snxt, bt, qgen) = LFC.CalcMaxQk(b, sk);
+                // save Sbus
                 b.Qgen = qgen;
-                b.Sbus = snxt; // save Sbus
+                b.Sbus = snxt;
                 // Determine if PV bus should be
                 // switched to PQ bus or back to PV bus
                 var statusChanged = b.BusType != bt;
                 nrRes.PVBusStatusChanged |= statusChanged;
                 b.BusType = bt;
-
             }
         }
 
