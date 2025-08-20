@@ -84,20 +84,18 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// <returns>All calculated values for an iteration</returns>
         internal void Iterate(NRResult nrRes, BU buses, MC YMatrix, double threshold = 0.0001)
         {
-            var Y = YMatrix;
-
             // Determine classification of each bus
             nrRes.NRBuses = JC.ReIndexBusPQ(buses);
 
             // Step 1
-            CalcDeltaPQ(Y, nrRes); // delta P and Q
+            CalcDeltaPQ(YMatrix, nrRes); // delta P and Q
 
             if (CheckSolution(nrRes, threshold))
                 return;
 
             // Step 2
             // Calculate Jacobian matrix
-            CalcJMatrix(Y, nrRes);
+            CalcJMatrix(YMatrix, nrRes);
 
             // Step 3
             CalcAVDelta(nrRes);

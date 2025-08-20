@@ -66,12 +66,13 @@ namespace EEMathLib.LoadFlow.Data
             return _network;
         }
 
-        public abstract INewtonRaphsonData GetNewtonRaphsonData(int iteration = 0);
+        virtual public INewtonRaphsonData GetNewtonRaphsonData(int iteration = 0) =>
+            throw new NotImplementedException();
 
         protected Complex Zero => Complex.Zero;
         protected Complex C(double g, double b) => new Complex(g, b);
 
-        public void Dispose()
+        virtual public void Dispose()
         {
             _network?.Dispose();
             _network = null;
