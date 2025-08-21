@@ -38,6 +38,7 @@ namespace EEMathLib.LoadFlow.Data
         /// Line shunt susceptance
         /// </summary>
         public double BShunt { get; set; }
+        public int TxTap { get; set; }
         /// <summary>
         /// Line series Susceptance
         /// </summary>

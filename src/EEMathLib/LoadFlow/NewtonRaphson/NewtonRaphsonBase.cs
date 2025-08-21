@@ -19,14 +19,38 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     {
         #region Solve
 
-        /// <summary>
-        /// Calculate Newton-Raphson load flow
-        /// </summary>
+        public virtual Result<LFResult> Solve(EENetwork network, BU initBuses,
+            double threshold = 0.015, int maxIteration = 20)
+        {
+            var buses = Initialize(network.Buses);
+            var dinit = initBuses.ToDictionary(b => b.ID);
+            foreach (var bu in buses)
+            {
+                if (dinit.TryGetValue(bu.ID, out var binit))
+                {
+                    bu.BusType = binit.BusType;
+                    bu.BusVoltage = binit.BusVoltage;
+                    bu.Sbus = binit.Sbus;
+                    bu.Qgen = binit.Qgen;
+                }
+            }
+            return SolveImplement(network, buses, threshold, maxIteration);
+        }
+
         public virtual Result<LFResult> Solve(EENetwork network,
             double threshold = 0.015, int maxIteration = 20)
         {
-            var Y = network.YMatrix;
             var buses = Initialize(network.Buses);
+            return SolveImplement(network, buses, threshold, maxIteration);
+        }
+
+        /// <summary>
+        /// Calculate Newton-Raphson load flow
+        /// </summary>
+        protected virtual Result<LFResult> SolveImplement(EENetwork network, BU buses,
+            double threshold = 0.015, int maxIteration = 20)
+        {
+            var Y = network.YMatrix;
 
             var i = 0;
             // min error found during iterations
@@ -53,7 +77,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                             Data = new LFResult { Buses = buses, Lines = null },
                             IterationStop = nrRes.Iteration,
                             Error = ErrorEnum.Divergence,
-                            ErrorMessage = "Divergence detected during Gauss-Siedel iterations."
+                            ErrorMessage = "Divergence detected during Newton-Raphson iterations."
                         };
                     else lastMinErr = Math.Min(lastMinErr, nrRes.MaxErr);
                 }

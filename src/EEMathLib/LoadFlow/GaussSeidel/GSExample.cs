@@ -33,13 +33,13 @@ namespace EEMathLib.LoadFlow.GaussSeidel
         /// <summary>
         /// Solve load flow using Gauss-Seidel method.
         /// </summary>
-        public static bool Solve(ILFData data, bool validate = false)
+        public static bool Solve(ILFData data, bool validate = false, int maxIteration = 100)
         {
             var nw = data.CreateNetwork();
             var threshold = 0.0001;
 
             var solver = new LFGaussSeidel();
-            var res = solver.Solve(nw, threshold, 100);
+            var res = solver.Solve(nw, threshold, maxIteration);
 
             if (res.IsError)
                 return false;

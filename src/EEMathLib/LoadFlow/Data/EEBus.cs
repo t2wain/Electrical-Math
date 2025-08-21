@@ -1,4 +1,6 @@
-﻿namespace EEMathLib.LoadFlow.Data
+﻿using System.Runtime;
+
+namespace EEMathLib.LoadFlow.Data
 {
     public enum BusTypeEnum
     {
@@ -31,9 +33,13 @@
         public double Qload { get; set; }
 
         public double Pgen { get; set; }
+        public double Qgen { get; set; }
 
         public double Qmin { get; set; }
         public double Qmax { get; set; }
+
+        public double Gshunt { get; set; }
+        public double Bshunt { get; set; }
 
         public double VoltageResult { get; set; }
         public double AngleResult { get; set; }

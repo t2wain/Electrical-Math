@@ -4,6 +4,7 @@ using System.Linq;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
 using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
 using LFC = EEMathLib.LoadFlow.LFCommon;
+using EEMathLib.LoadFlow.GaussSeidel;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
@@ -159,14 +160,42 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         #region Solve
 
-        public static bool LFSolve(ILFData data, bool validate = false)
+        public static bool LFSolve(ILFData data, bool validate = false, int maxIteration = 50)
         {
 
             var nw = data.CreateNetwork();
             var threshold = 0.001;
 
             var solver = new LFNR();
-            var res = solver.Solve(nw, threshold, 50);
+            var res = solver.Solve(nw, threshold, maxIteration);
+
+            if (res.IsError)
+                return false;
+
+            if (!validate)
+                return true;
+
+            var c = LFC.ValidateLFResult(nw, res.Data, 0.05);
+            return c;
+        }
+
+        public static bool LFSolve_InitCond(ILFData data, bool validate = false, int maxIteration = 50)
+        {
+
+            var nw = data.CreateNetwork();
+            var threshold = 0.001;
+
+            // Run GS with fix iteration
+            // to set the initial bus condition
+            var gsSolver = new LFGaussSeidel();
+            var res = gsSolver.Solve(nw, threshold, 50);
+            
+            if (res.Error == DTO.ErrorEnum.Divergence)
+                return false;
+
+            // Run NR using bus intial condition for GS
+            var nrSolver = new LFNR();
+            res = nrSolver.Solve(nw, res.Data.Buses, threshold, maxIteration);
 
             if (res.IsError)
                 return false;

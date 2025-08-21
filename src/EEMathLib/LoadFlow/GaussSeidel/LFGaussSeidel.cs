@@ -17,14 +17,39 @@ namespace EEMathLib.LoadFlow.GaussSeidel
     {
         #region Solve
 
+        public Result<LFResult> Solve(EENetwork network, BU initBuses,
+            double threshold = 0.015, int maxIteration = 20)
+        {
+            var buses = Initialize(network.Buses);
+            var dinit = initBuses.ToDictionary(b => b.ID);
+            foreach (var bu in buses)
+            {
+                if (dinit.TryGetValue(bu.ID, out var binit))
+                {
+                    bu.BusType = binit.BusType;
+                    bu.BusVoltage = binit.BusVoltage;
+                    bu.Sbus = binit.Sbus;
+                    bu.Qgen = binit.Qgen;
+                }
+            }
+            return SolveImplement(network, buses, threshold, maxIteration);
+        }
+
+
+        public Result<LFResult> Solve(EENetwork network,
+            double threshold = 0.0001, int maxIteration = 100)
+        {
+            var buses = Initialize(network.Buses);
+            return SolveImplement(network, buses, threshold, maxIteration);
+        }
+
         /// <summary>
         /// Calculate load flow
         /// </summary>
-        public Result<LFResult> Solve(EENetwork network, 
+        protected Result<LFResult> SolveImplement(EENetwork network, BU buses, 
             double threshold = 0.0001, int maxIteration = 100)
         {
             var Y = network.YMatrix;
-            var buses = Initialize(network.Buses);
 
             var slackBus = buses
                 .Where(b => b.BusData.BusType == BusTypeEnum.Slack)
@@ -122,11 +147,11 @@ namespace EEMathLib.LoadFlow.GaussSeidel
                     // update Sbus
                     bus.Sbus = snxt;
                     bus.Qgen = qgen;
+                    var statusChanged = bus.BusType != bt;
                     bus.BusType = bt;
 
                     // calculate Vbus
                     var vnxt = LFC.CalcBusVoltage(bus, Y, buses);
-                    //bus.UpdateAErr(bus.BusVoltage.Phase, vnxt.Phase, i);
 
                     if (bt == BusTypeEnum.PV)
                     {
