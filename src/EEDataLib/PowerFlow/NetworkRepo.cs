@@ -15,16 +15,6 @@ namespace EEDataLib.PowerFlow
             PopulateLines(dvline);
         }
 
-        T Parse<T>(object v)
-        {
-            if (v != DBNull.Value)
-                return (T)v;
-            else return default;
-        }
-
-        double? ParseNullable(double v) =>
-            Math.Abs(v) <= 0 ? null : (double?)v;
-
         #region Buses
 
         void PopulateBuses(DataView dvbus)
@@ -39,34 +29,20 @@ namespace EEDataLib.PowerFlow
             new EEBus
             {
                 ID = row["ID"].ToString(),
-                BusIndex = (int)Parse<double>(row["Index"]),
-                BusType = ParseBusType(row["Type"].ToString()),
-                Voltage = Parse<double>(row["V"]),
-                Pload = Parse<double>(row["Pl"]),
-                Qload = Parse<double>(row["Ql"]),
-                Pgen = Parse<double>(row["Pg"]),
-                Qmin = Parse<double>(row["Qmin"]),
-                Qmax = Parse<double>(row["Qmax"]),
-                VoltageResult = Parse<double>(row["Vk"]),
-                AngleResult = Parse<double>(row["Ak"]),
-                QResult = Parse<double>(row["Qk"]),
-                QgenResult = Parse<double>(row["Qkgen"]),
+                BusIndex = (int)row.GetDouble("Index"),
+                BusType = row.GetBusType("Type"),
+                Voltage = row.GetDouble("V"),
+                Pload = row.GetDouble("Pl"),
+                Qload = row.GetDouble("Ql"),
+                Pgen = row.GetDouble("Pg"),
+                Qmin = row.GetDouble("Qmin"),
+                Qmax = row.GetDouble("Qmax"),
+                VoltageResult = row.GetDouble("Vk"),
+                AngleResult = row.GetDouble("Ak"),
+                PResult = row.GetDouble("Pk"),
+                QResult = row.GetDouble("Qk"),
+                QgenResult = row.GetDouble("Qkgen"),
             };
-
-        BusTypeEnum ParseBusType(string btype) 
-        {
-            switch (btype)
-            {
-                case "S":
-                    return BusTypeEnum.Slack;
-                case "PQ":
-                    return BusTypeEnum.PQ;
-                case "PV":
-                    return BusTypeEnum.PV;
-                default:
-                    throw new Exception();
-            }
-        }
 
         #endregion
 
@@ -84,30 +60,17 @@ namespace EEDataLib.PowerFlow
             new EELine
             {
                 ID = row["ID"].ToString(),
-                LineType = ParseLineType(row["Type"].ToString()),
+                LineType = row.GetLineType("Type"),
                 FromBusID = row["FromBusID"].ToString(),
                 ToBusID = row["ToBusID"].ToString(),
-                RSeries = Parse<double>(row["Rseries"]),
-                XSeries = Parse<double>(row["Xseries"]),
-                BShunt = Parse<double>(row["Bshunt"]),
-                PResult = ParseNullable(Parse<double>(row["Pf"])),
-                QResult = ParseNullable(Parse<double>(row["Qf"])),
-                PResultReverse = ParseNullable(Parse<double>(row["Pr"])),
-                QResultReverse = ParseNullable(Parse<double>(row["Qr"])),
+                RSeries = row.GetDouble("Rseries"),
+                XSeries = row.GetDouble("Xseries"),
+                BShunt = row.GetDouble("Bshunt"),
+                PResult = row.GetNullDouble("Pf"),
+                QResult = row.GetNullDouble("Qf"),
+                PResultReverse = row.GetNullDouble("Pr"),
+                QResultReverse = row.GetNullDouble("Qr"),
             };
-
-        LineTypeEnum ParseLineType(string ltype)
-        {
-            switch (ltype)
-            {
-                case "L":
-                    return LineTypeEnum.Line;
-                case "T":
-                    return LineTypeEnum.Transformer;
-                default:
-                    throw new Exception();
-            }
-        }
 
         #endregion
     }
@@ -161,6 +124,61 @@ namespace EEDataLib.PowerFlow
         public void Dispose()
         {
             CleanUp();
+        }
+    }
+
+    static class DataRowViewExtensions
+    {
+        public static T Get<T>(this DataRowView row, string fieldName)
+        {
+            var v = row[fieldName];
+            if (v != DBNull.Value)
+                return (T)v;
+            else return default;
+        }
+
+        public static double GetDouble(this DataRowView row, string fieldName)
+        {
+            if (row[fieldName] is double v)
+                return v;
+            else return 0;
+        }
+
+        public static double? GetNullDouble(this DataRowView row, string fieldName)
+        {
+            if (row[fieldName] is double v && Math.Abs(v) > 1e-100)
+                return v;
+            else return null;
+        }
+
+        public static BusTypeEnum GetBusType(this DataRowView row, string fieldName)
+        {
+            var btype = row[fieldName].ToString();
+            switch (btype)
+            {
+                case "S":
+                    return BusTypeEnum.Slack;
+                case "PQ":
+                    return BusTypeEnum.PQ;
+                case "PV":
+                    return BusTypeEnum.PV;
+                default:
+                    throw new Exception();
+            }
+        }
+
+        public static LineTypeEnum GetLineType(this DataRowView row, string fieldName)
+        {
+            var ltype = row[fieldName].ToString();
+            switch (ltype)
+            {
+                case "L":
+                    return LineTypeEnum.Line;
+                case "T":
+                    return LineTypeEnum.Transformer;
+                default:
+                    throw new Exception();
+            }
         }
     }
 }

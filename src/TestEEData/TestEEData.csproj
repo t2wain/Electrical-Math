@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EEDataLib\EEDataLib.csproj" />
+    <ProjectReference Include="..\EEMathLib\EEMathLib.csproj" />
   </ItemGroup>
 
   <ItemGroup>

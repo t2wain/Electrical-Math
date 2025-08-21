@@ -190,7 +190,7 @@ namespace EEDataLib.Excel.ClosedXml
     }
 
 
-    static class ClosedXmlObject
+    static class ClosedXmlExtensions
     {
         #region IXLWorksheet
 
