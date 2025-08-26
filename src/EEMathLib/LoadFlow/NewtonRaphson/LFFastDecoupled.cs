@@ -1,4 +1,4 @@
-﻿using JCFD = EEMathLib.LoadFlow.NewtonRaphson.JacobianFD;
+﻿using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
 
@@ -10,6 +10,8 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     /// </summary>
     public class LFFastDecoupled : NewtonRaphsonBase
     {
+        JacobianBase _jc = new JacobianFD();
+
         /// <summary>
         /// Carry over the J1 and J4 Jacobian matrices for used in 
         /// the next iteration. However, if any PV bus changed state 
@@ -45,12 +47,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             // re-use J1 and J4 matrices
             if (nrRes.J1Matrix == null)
             {
-                nrRes.J1Matrix = JCFD.CreateJ1(YMatrix, nrRes.NRBuses);
+                nrRes.J1Matrix = _jc.CreateJ1(YMatrix, nrRes.NRBuses);
                 nrRes.J1LUMatrix = nrRes.J1Matrix.LU();
             }
             if (nrRes.J4Matrix == null)
             {
-                nrRes.J4Matrix = JCFD.CreateJ4(YMatrix, nrRes.NRBuses);
+                nrRes.J4Matrix = _jc.CreateJ4(YMatrix, nrRes.NRBuses);
                 nrRes.J4LUMatrix = nrRes.J4Matrix.LU();
             }
         }

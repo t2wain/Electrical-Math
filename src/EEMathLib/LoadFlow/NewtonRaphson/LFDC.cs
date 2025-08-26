@@ -1,8 +1,9 @@
 ﻿using EEMathLib.DTO;
+using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
 using System.Linq;
 using System.Numerics;
-using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
-using JCFD = EEMathLib.LoadFlow.NewtonRaphson.JacobianFD;
+using JC = EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.Jacobian;
+using JCFD = EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.JacobianFD;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
@@ -25,7 +26,8 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
             // Step 2
             // Calculate J1 matrix
-            var J1Matrix = JCFD.CreateJ1(Y, res.NRBuses);
+            var jc = new JacobianFD();
+            var J1Matrix = jc.CreateJ1(Y, res.NRBuses);
 
             // Step 3
             // Prepare the matrix of injected power at each bus

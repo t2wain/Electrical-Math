@@ -2,8 +2,9 @@
 using EEMathLib.MatrixMath;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
 using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
-using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
+using JC = EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.Jacobian;
 using MathNet.Numerics.LinearAlgebra.Factorization;
+using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
@@ -56,6 +57,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         public static NRResult Parse(ILFData data, int iteration)
         {
             var nrData = data.GetNewtonRaphsonData(iteration);
+            var jc = new Jacobian();
 
             MD J = null;
             if (nrData.JacobianData is JacobianData jcData) { 
@@ -63,7 +65,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 var J2 = MX.ParseMatrix(jcData.J2Result);
                 var J3 = MX.ParseMatrix(jcData.J3Result);
                 var J4 = MX.ParseMatrix(jcData.J4Result);
-                J = JC.CreateJMatrix(J1, J2, J3, J4);
+                J = JacobianBase.CreateJMatrix(J1, J2, J3, J4);
             }
 
             var buses = LFNR.Initialize(data.Busses);

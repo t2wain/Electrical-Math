@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
-using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
+using JC = EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.Jacobian;
 using LFC = EEMathLib.LoadFlow.LFCommon;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;

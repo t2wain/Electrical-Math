@@ -1,9 +1,10 @@
 ﻿using EEMathLib.LoadFlow.Data;
+using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
 using EEMathLib.MatrixMath;
 using MathNet.Numerics.LinearAlgebra;
 using System;
 using System.Linq;
-using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
+using JC = EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.Jacobian;
 using LFNR = EEMathLib.LoadFlow.NewtonRaphson.NewtonRaphsonBase;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
@@ -68,7 +69,11 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             // Calculate Jacobian matrix
             if (data.JMatrix != null)
                 res.JMatrix = data.JMatrix;
-            else res.JMatrix = JC.CreateJMatrix(Y, res.NRBuses);
+            else
+            {
+                var jc = new Jacobian();
+                res.JMatrix = jc.CreateJMatrix(Y, res.NRBuses);
+            }
 
             if (steps <= 2)
                 return res;

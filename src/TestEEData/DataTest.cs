@@ -16,7 +16,7 @@ namespace TestEEData
         }
 
         [Fact]
-        public void LoadFlowGS_Solve_Data1()
+        public void LoadFlowGS_Solve_Validate_Data1()
         {
             var data1 = _repo.GetNetworkData("N1");
             var c = GSExample.Solve(data1, true);
@@ -24,7 +24,7 @@ namespace TestEEData
         }
 
         [Fact]
-        public void LoadFlowGS_Solve_Data2()
+        public void LoadFlowGS_Solve_Validate_Data2()
         {
             var data2 = _repo.GetNetworkData("N2");
             var nw = data2.CreateNetwork();
@@ -38,6 +38,14 @@ namespace TestEEData
 
         [Fact]
         public void LoadFlowGS_Solve_Data3()
+        {
+            var data3 = _repo.GetNetworkData("N3");
+            var c = GSExample.Solve(data3, false, 150);
+            Assert.True(c, "Load flow calculation failed");
+        }
+
+        [Fact]
+        public void LoadFlowGS_Solve_Validate_Data3()
         {
             var data3 = _repo.GetNetworkData("N3");
             var c = GSExample.Solve(data3, true, 150);

@@ -1,5 +1,5 @@
 ﻿using EEMathLib.LoadFlow.Data;
-using EEMathLib.LoadFlow.NewtonRaphson;
+using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
 
 namespace TestUnit
 {

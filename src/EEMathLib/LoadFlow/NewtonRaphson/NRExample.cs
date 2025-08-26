@@ -1,10 +1,11 @@
 ﻿using EEMathLib.LoadFlow.Data;
 using EEMathLib.MatrixMath;
 using System.Linq;
-using JC = EEMathLib.LoadFlow.NewtonRaphson.Jacobian;
+using JC = EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.Jacobian;
 using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
 using LFC = EEMathLib.LoadFlow.LFCommon;
 using EEMathLib.LoadFlow.GaussSeidel;
+using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
@@ -42,7 +43,8 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             var buses = LFNR.Initialize(nw.Buses);
             var nrBuses = JC.ReIndexBusPQ(buses);
 
-            var J1 = JC.CreateJ1(nw.YMatrix, nrBuses);
+            var jc = new Jacobian();
+            var J1 = jc.CreateJ1(nw.YMatrix, nrBuses);
             var JRes = data.GetNewtonRaphsonData().JacobianData;
             var res = MX.ParseMatrix(JRes.J1Result);
             var bus2 = nrBuses.Buses.FirstOrDefault(b => b.ID == "2");

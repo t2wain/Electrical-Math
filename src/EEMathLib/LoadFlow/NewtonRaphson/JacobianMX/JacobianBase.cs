@@ -5,13 +5,10 @@ using BU = System.Collections.Generic.IEnumerable<EEMathLib.LoadFlow.BusResult>;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
 
-namespace EEMathLib.LoadFlow.NewtonRaphson
+namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX
 {
-    /// <summary>
-    /// Algorithm to calculate Jacobian matrix for Newton-Raphson load flow
-    /// </summary>
-    public static class Jacobian
-    {
+    public abstract class JacobianBase
+    {        
         #region NRBuses
 
         /// <summary>
@@ -137,42 +134,21 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// P/A derivative Jacobian matrix.
         /// Diagonal entries
         /// </summary>
-        public static double CalcJ1kk(BusResult bk, MC Y, NRBuses nrBuses)
-        {
-            var jk = bk.BusData.BusIndex;
-            var vk = bk.BusVoltage;
-            var skn = nrBuses.AllBuses
-                .Where(bn => bn.BusData.BusIndex != jk)
-                .Select(bn => {
-                    var vn = bn.BusVoltage;
-                    var ykn = Y[jk, bn.BusData.BusIndex];
-                    var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Sign(a);
-                    return s;
-                })
-                .Aggregate((a, b) => a + b);
-            return -skn;
-        }
+        public virtual double CalcJ1kk(BusResult bk, MC Y, NRBuses nrBuses) => 
+            throw new NotImplementedException();
 
         /// <summary>
         /// P/A derivative Jacobian matrix.
         /// Off-diagonal entries
         /// </summary>
-        public static double CalcJ1kn(BusResult bk, BusResult bn, MC Y)
-        {
-            var vk = bk.BusVoltage;
-            var vn = bn.BusVoltage;
-            var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-            var a = vk.Phase - ykn.Phase - vn.Phase;
-            var jkn = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Sign(a);
-            return jkn;
-        }
+        public virtual double CalcJ1kn(BusResult bk, BusResult bn, MC Y) =>
+            throw new NotImplementedException();
 
         /// <summary>
         /// P/A derivative Jacobian matrix.
         /// Off-diagonal entries
         /// </summary>
-        public static MD CreateJ1(MC Y, NRBuses nrBuses)
+        public virtual MD CreateJ1(MC Y, NRBuses nrBuses)
         {
             var J = MD.Build.Dense(nrBuses.J1Size.Row, nrBuses.J1Size.Col);
             foreach (var bk in nrBuses.Buses) // row
@@ -206,45 +182,21 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// P/V derivative Jacobian matrix.
         /// Diagonal entries
         /// </summary>
-        public static double CalcJ2kk(BusResult bk, MC Y, NRBuses nRBuses)
-        {
-            var jk = bk.BusData.BusIndex;
-            var vk = bk.BusVoltage;
-            var ykk = Y[jk, jk];
-            var skk = nRBuses.AllBuses
-                .Where(bn => bn.BusData.BusIndex != jk)
-                .Select(bn =>
-                {
-                    var vn = bn.BusVoltage;
-                    var ykn = Y[jk, bn.BusData.BusIndex];
-                    var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = ykn.Magnitude * vn.Magnitude * Math.Cos(a);
-                    return s;
-                })
-                .Aggregate((a, b) => a + b);
-            var i = 2 * vk.Magnitude * ykk.Real;
-            return i + skk;
-        }
+        public virtual double CalcJ2kk(BusResult bk, MC Y, NRBuses nRBuses) => 
+            throw new NotImplementedException();
 
         /// <summary>
         /// P/V derivative Jacobian matrix.
         /// Off-diagonal entries
         /// </summary>
-        public static double CalcJ2kn(BusResult bk, BusResult bn, MC Y)
-        {
-            var vk = bk.BusVoltage;
-            var vn = bk.BusVoltage;
-            var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-            var a = vk.Phase - ykn.Phase - vn.Phase;
-            var jkn = vk.Magnitude * ykn.Magnitude * Math.Cos(a);
-            return jkn;
-        }
+        public virtual double CalcJ2kn(BusResult bk, BusResult bn, MC Y) => 
+            throw new NotImplementedException();
 
         /// <summary>
         /// P/V derivative Jacobian matrix.
         /// Off-diagonal entries
         /// </summary>
-        public static MD CreateJ2(MC Y, NRBuses nrBuses)
+        public virtual MD CreateJ2(MC Y, NRBuses nrBuses)
         {
             var J = MD.Build.Dense(nrBuses.J2Size.Row, nrBuses.J2Size.Col);
             foreach (var bk in nrBuses.Buses) // row
@@ -279,43 +231,21 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// Q/A derivative Jacobian matrix.
         /// Diagonal entries.
         /// </summary>
-        public static double CalcJ3kk(BusResult bk, MC Y, NRBuses nRBuses)
-        {
-            var jk = bk.BusData.BusIndex;
-            var vk = bk.BusVoltage;
-            var skk = nRBuses.AllBuses
-                .Where(bn => bn.BusData.BusIndex != jk)
-                .Select(bn =>
-                {
-                    var vn = bn.BusVoltage;
-                    var ykn = Y[jk, bn.BusData.BusIndex];
-                    var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Cos(a);
-                    return s;
-                })
-                .Aggregate((a, b) => a + b);
-            return skk;
-        }
+        public virtual double CalcJ3kk(BusResult bk, MC Y, NRBuses nRBuses) =>
+            throw new NotImplementedException();
 
         /// <summary>
         /// Q/A derivative Jacobian matrix.
         /// Off-diagonal entries.
         /// </summary>
-        public static double CalcJ3kn(BusResult bk, BusResult bn, MC Y)
-        {
-            var vk = bk.BusVoltage;
-            var vn = bn.BusVoltage;
-            var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-            var a = vk.Phase - ykn.Phase - vn.Phase;
-            var jkn = -vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Cos(a);
-            return jkn;
-        }
+        public virtual double CalcJ3kn(BusResult bk, BusResult bn, MC Y) =>
+            throw new NotImplementedException();
 
         /// <summary>
         /// Q/A derivative Jacobian matrix.
         /// Off-diagonal entries.
         /// </summary>
-        public static MD CreateJ3(MC Y, NRBuses nrBuses)
+        public virtual MD CreateJ3(MC Y, NRBuses nrBuses)
         {
             var J = MD.Build.Dense(nrBuses.J3Size.Row, nrBuses.J3Size.Col);
 
@@ -351,45 +281,21 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// Q/V derivative Jacobian matrix.
         /// Diagonal entries.
         /// </summary>
-        public static double CalcJ4kk(BusResult bk, MC Y, NRBuses nRBuses)
-        {
-            var jk = bk.BusData.BusIndex;
-            var vk = bk.BusVoltage;
-            var ykk = Y[jk, jk];
-            var skk = nRBuses.AllBuses
-                .Where(bn => bn.BusData.BusIndex != jk)
-                .Select(bn =>
-                {
-                    var vn = bn.BusVoltage;
-                    var ykn = Y[jk, bn.BusData.BusIndex];
-                    var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = ykn.Magnitude * vn.Magnitude * Math.Sign(a);
-                    return s;
-                })
-                .Aggregate((a, b) => a + b);
-            var i = -2 * vk.Magnitude * ykk.Imaginary;
-            return i + skk;
-        }
+        public virtual double CalcJ4kk(BusResult bk, MC Y, NRBuses nRBuses) =>
+            throw new NotImplementedException();
 
         /// <summary>
         /// Q/A derivative Jacobian matrix.
         /// Off-diagonal entries.
         /// </summary>
-        public static double CalcJ4kn(BusResult bk, BusResult bn, MC Y)
-        {
-            var vk = bk.BusVoltage;
-            var vn = bn.BusVoltage;
-            var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-            var a = vk.Phase - ykn.Phase - vn.Phase;
-            var jkn = vk.Magnitude * ykn.Magnitude * Math.Sign(a);
-            return jkn;
-        }
+        public virtual double CalcJ4kn(BusResult bk, BusResult bn, MC Y) =>
+            throw new NotImplementedException();
 
         /// <summary>
         /// Q/V derivative Jacobian matrix.
         /// Off-diagonal entries.
         /// </summary>
-        public static MD CreateJ4(MC Y, NRBuses nrBuses)
+        public virtual MD CreateJ4(MC Y, NRBuses nrBuses)
         {
             var J = MD.Build.Dense(nrBuses.J4Size.Row, nrBuses.J4Size.Col);
             foreach (var bk in nrBuses.PQBuses) // row
@@ -421,7 +327,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// <summary>
         /// Calculate Jacobian matrix
         /// </summary>
-        public static MD CreateJMatrix(MC Y, NRBuses nrBuses)
+        public virtual MD CreateJMatrix(MC Y, NRBuses nrBuses)
         {
             var J1 = CreateJ1(Y, nrBuses);
             var J2 = CreateJ2(Y, nrBuses);
@@ -441,5 +347,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
             return J;
         }
+
     }
 }
