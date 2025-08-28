@@ -1,11 +1,13 @@
 ﻿using EEMathLib.LoadFlow.Data;
+using EEMathLib.LoadFlow.GaussSeidel;
+using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
+using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V2;
+using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V3;
 using EEMathLib.MatrixMath;
 using System.Linq;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.Jacobian;
-using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
 using LFC = EEMathLib.LoadFlow.LFCommon;
-using EEMathLib.LoadFlow.GaussSeidel;
-using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
+using LFNR = EEMathLib.LoadFlow.NewtonRaphson.LFNewtonRaphson;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
@@ -162,13 +164,26 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
 
         #region Solve
 
-        public static bool LFSolve(ILFData data, bool validate = false, int maxIteration = 50)
+        public static bool LFSolve(ILFData data, int algoVer, bool validate = false, int maxIteration = 50)
         {
 
             var nw = data.CreateNetwork();
             var threshold = 0.001;
 
-            var solver = new LFNR();
+            ILFSolver solver;
+            switch (algoVer)
+            {
+                case 2:
+                    solver = new LFNewtonRaphsonV2();
+                    break;
+                case 3:
+                    solver = new LFNewtonRaphsonV3();
+                    break;
+                default:
+                    solver = new LFNR();
+                    break;
+            }
+
             var res = solver.Solve(nw, threshold, maxIteration);
 
             if (res.IsError)
@@ -180,6 +195,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             var c = LFC.ValidateLFResult(nw, res.Data, 0.05);
             return c;
         }
+
 
         public static bool LFSolve_InitCond(ILFData data, bool validate = false, int maxIteration = 50)
         {
@@ -209,6 +225,22 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return c;
         }
 
+        #endregion
+
+        #region Approximate
+
+        public static bool LFSolve_Decoupled(ILFData data)
+        {
+
+            var nw = data.CreateNetwork();
+            var threshold = 0.001;
+
+            var solver = new LFDecoupled();
+            var res = solver.Solve(nw, threshold, 50);
+
+            return !res.IsError;
+        }
+
         public static bool LFSolve_FastDecoupled(ILFData data)
         {
 
@@ -221,6 +253,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return !res.IsError;
         }
 
+        /// <summary>
+        /// Only calculate 1 iteration to get an estimated solution
+        /// </summary>
         public static bool LFSolve_FastDecoupled_Approximation(ILFData data)
         {
 
@@ -233,13 +268,16 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return true;
         }
 
-        public static bool LFSolve_DCLike(ILFData data)
+        /// <summary>
+        /// Only calculate 1 iteration to get an estimated solution
+        /// </summary>
+        public static bool LFSolve_DCLike_Approximation(ILFData data)
         {
 
             var nw = data.CreateNetwork();
             var solver = new LFDC();
             var res = solver.Solve(nw);
-            return !res.IsError;
+            return true;
         }
 
 

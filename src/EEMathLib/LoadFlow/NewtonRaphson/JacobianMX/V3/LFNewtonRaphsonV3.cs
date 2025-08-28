@@ -1,19 +1,18 @@
 ﻿using EEMathLib.LoadFlow.Data;
-using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
-namespace EEMathLib.LoadFlow.NewtonRaphson
+namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V3
 {
     /// <summary>
     /// Newton-Raphson load flow algorithm
     /// </summary>
-    public class LFNewtonRaphson : NewtonRaphsonBase
+    public class LFNewtonRaphsonV3 : LFNewtonRaphson
     {
         JacobianBase _jc;
 
-        public LFNewtonRaphson()
+        public LFNewtonRaphsonV3()
         {
-            _jc = new Jacobian();
+            _jc = new JacobianV3();
         }
 
         override internal void CalcJMatrix(MC YMatrix, NRResult nrRes)
@@ -36,7 +35,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
                 if (b.BusType == BusTypeEnum.PQ)
                 {
                     var dV = nrRes.AVDelta[b.Vidx + acnt, 0];
-                    nrRes.VDelta[b.Vidx] = dV; // save dV calculation
+                    nrRes.VDelta[b.Vidx] = dV * b.BusVoltage.Magnitude; // save dV calculation
                 }
             }
         }

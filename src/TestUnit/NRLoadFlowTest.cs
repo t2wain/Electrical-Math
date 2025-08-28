@@ -14,7 +14,14 @@ namespace TestUnit
         [Fact]
         public void Calc_LoadFlow()
         {
-            var c = NRExample.LFSolve(_ctx.LoadFlowData1Y, true);
+            var c = NRExample.LFSolve(_ctx.LoadFlowData1Y, 0, true);
+            Assert.True(c);
+        }
+
+        [Fact]
+        public void Calc_LoadFlow_V3()
+        {
+            var c = NRExample.LFSolve(_ctx.LoadFlowData1Y, 3, false);
             Assert.True(c);
         }
 

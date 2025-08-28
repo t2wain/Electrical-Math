@@ -1,5 +1,6 @@
 ﻿using EEMathLib.DTO;
 using EEMathLib.LoadFlow.Data;
+using MathNet.Numerics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -128,7 +129,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
                 // load bus
                 if (bus.BusData.BusType == BusTypeEnum.PQ)
                 {
-                    var vnxt = LFC.CalcBusVoltage(bus, Y, buses);
+                    var vnxt = CalcBusVoltage(bus, Y, buses);
                     res.ABus[bus.BusIndex] = vnxt.Phase;
                     res.VBus[bus.BusIndex] = vnxt.Magnitude;
                     UpdateErr(res, bus.BusVoltage, vnxt);
@@ -151,7 +152,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
                     bus.BusType = bt;
 
                     // calculate Vbus
-                    var vnxt = LFC.CalcBusVoltage(bus, Y, buses);
+                    var vnxt = CalcBusVoltage(bus, Y, buses);
 
                     if (bt == BusTypeEnum.PV)
                     {
@@ -175,6 +176,35 @@ namespace EEMathLib.LoadFlow.GaussSeidel
 
         #endregion
 
+        #region Calculate
+
+        /// <summary>
+        /// Calculate Vk, Ak given Pk, Qk for bus k.
+        /// </summary>
+        /// <returns>Voltage Sk</returns>
+        public static Complex CalcBusVoltage(BusResult bus, MC Y, BU buses)
+        {
+            var k = bus.BusIndex;
+            var yk = Y[k, k];
+            var sk = bus.Sbus; // given Pk, Qk for bus k
+            var vk = bus.BusVoltage; // calculated voltage from previous iteration
+            var sv = buses
+                .Where(b => b.BusIndex != k)
+                .Select(b =>
+                {
+                    var idx = b.BusIndex;
+                    var yb = Y[k, idx];
+                    return yb * b.BusVoltage;
+                })
+                .Aggregate((v1, v2) => v1 + v2);
+
+            // calculate next voltage value
+            var skConj = sk.Conjugate();
+            var vknxt = 1 / yk * (skConj / vk.Conjugate() - sv); // using vk
+            var vknxt2 = 1 / yk * (skConj / vknxt.Conjugate() - sv); // using vknxt
+            return vknxt2;
+        }
+
         internal static BU Initialize(IEnumerable<EEBus> buses) =>
             buses
                 .OrderBy(b => b.BusIndex)
@@ -195,5 +225,6 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             res.MaxVErr = Math.Max(res.MaxVErr, e);
         }
 
+        #endregion
     }
 }

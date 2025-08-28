@@ -104,6 +104,14 @@ Newton-Raphson DC-Like
 - Speed (better)
 - Approximation
 
+## Jacobian Matrix
+
+There are many textbooks that provide different calculations fo the Jacobian matrix. The code-base provides three different versions of the Jacobian calculation.
+
+## Power Flow Code Implementation Issues
+
+The Newton-Raphson algorithm in this code-base does not provide a consistent covergence solution for various sample network data. Also, the Gauss-Seidel and Newton-Raphson algorithms may converge to different solutions for some sample network data.
+
 ## Code Design
 
 The design of this code mostly follows the functional-programming architecture. The load flow algorithm requires many iterations and each iteration requires many calculation steps where the output of one calculation step is the input of the next calculation step. Much effort is made to ensure each calculation step can be tested independently and the final/intermediate outputs of each iteration and calculation step can be saved/inspected.

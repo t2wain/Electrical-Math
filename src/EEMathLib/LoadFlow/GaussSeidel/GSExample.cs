@@ -20,7 +20,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             var nw = data.CreateNetwork();
             var buses = LFGS.Initialize(nw.Buses);
             var bus = buses.FirstOrDefault(b => b.ID == "2");
-            var v = LFC.CalcBusVoltage(bus, nw.YMatrix, buses);
+            var v = LFGS.CalcBusVoltage(bus, nw.YMatrix, buses);
 
             var v2 = new Phasor(0.8746, -15.675);
             var e2 = (Phasor)v;

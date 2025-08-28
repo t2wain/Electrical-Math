@@ -19,6 +19,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     {
         #region Solve
 
+        /// <summary>
+        /// Allow the option to provide starting conditions for buses,
+        /// perhaps from preliminary result of Gauss-Seidel calculation.
+        /// </summary>
+        /// <param name="network"></param>
+        /// <param name="initBuses">Provide starting condition for the buses</param>
         public virtual Result<LFResult> Solve(EENetwork network, BU initBuses,
             double threshold = 0.015, int maxIteration = 20)
         {
@@ -37,6 +43,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return SolveImplement(network, buses, threshold, maxIteration);
         }
 
+        /// <summary>
+        /// Start the power flow calculation
+        /// </summary>
         public virtual Result<LFResult> Solve(EENetwork network,
             double threshold = 0.015, int maxIteration = 20)
         {
@@ -176,9 +185,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return nrRes;
         }
 
-        /// <summary>
-        /// Calculation step for each iteration
-        /// </summary>
         internal static void CalcDeltaPQ(MC Y, NRResult nrRes)
         {
             var nrBuses = nrRes.NRBuses;
@@ -206,9 +212,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
         }
 
-        /// <summary>
-        /// Calculation step for each iteration
-        /// </summary>
         internal static bool CheckSolution(NRResult res, double threshold)
         {
             res.MaxErr = res.PQDelta
@@ -229,9 +232,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             UpdatePVBusStatus(YMatrix, nrRes);
         }
 
-        /// <summary>
-        /// Calculation step for each iteration
-        /// </summary>
         internal static void UpdatePVBusStatus(MC YMatrix, NRResult nrRes)
         {
             foreach (var b in nrRes.NRBuses.AllPVBuses)
@@ -279,9 +279,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             UpdateBusAV(nrRes);
         }
 
-        /// <summary>
-        /// Calculation step for each iteration
-        /// </summary>
         internal static void UpdateBusAV(NRResult nrRes)
         {
             var acnt = nrRes.NRBuses.J1Size.Row;

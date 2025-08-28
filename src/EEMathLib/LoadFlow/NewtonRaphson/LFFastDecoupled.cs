@@ -10,7 +10,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     /// </summary>
     public class LFFastDecoupled : NewtonRaphsonBase
     {
-        JacobianBase _jc = new JacobianFD();
+        JacobianBase _jc;
+
+        public LFFastDecoupled()
+        {
+            _jc = new JacobianFD();
+        }
 
         /// <summary>
         /// Carry over the J1 and J4 Jacobian matrices for used in 
@@ -37,10 +42,10 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             {
                 nrRes.J4Matrix = null;
                 nrRes.J4LUMatrix = null;
-            };
+            }
+            ;
             return nrRes;
         }
-
 
         override internal void CalcJMatrix(MC YMatrix, NRResult nrRes)
         {
@@ -75,5 +80,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             AVDelta.SetSubMatrix(j1Size.Row, 0, VDelta);
             nrRes.AVDelta = AVDelta; // delta A and V
         }
+
     }
 }

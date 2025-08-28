@@ -15,6 +15,8 @@ namespace TestEEData
             _repo = ctx.Repo;
         }
 
+        #region N1
+
         [Fact]
         public void LoadFlowGS_Solve_Validate_Data1()
         {
@@ -22,6 +24,10 @@ namespace TestEEData
             var c = GSExample.Solve(data1, true);
             Assert.True(c, "Load flow calculation failed");
         }
+
+        #endregion
+
+        #region N2
 
         [Fact]
         public void LoadFlowGS_Solve_Validate_Data2()
@@ -35,6 +41,10 @@ namespace TestEEData
             var c = GSExample.Solve(data2, true);
             Assert.True(c, "Load flow calculation failed");
         }
+
+        #endregion
+
+        #region N3
 
         [Fact]
         public void LoadFlowGS_Solve_Data3()
@@ -56,9 +66,27 @@ namespace TestEEData
         public void LoadFlowNR_Solve_Data3()
         {
             var data3 = _repo.GetNetworkData("N3");
-            var c = NRExample.LFSolve(data3, false);
+            var c = NRExample.LFSolve(data3, 0, false);
             Assert.True(c);
         }
 
+        #endregion
+
+        #region N4
+
+        [Fact]
+        public void LoadFlowNR_Solve_Data4()
+        {
+            ILFData data4 = _repo.GetNetworkData("N4");
+
+            var Y = data4.CreateNetwork().YMatrix;
+
+            var c = NRExample.LFSolve(data4, 3, false);
+            Assert.True(c);
+
+
+        }
+
+        #endregion
     }
 }

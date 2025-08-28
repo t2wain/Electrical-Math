@@ -1,60 +1,56 @@
 ﻿using EEMathLib.DTO;
 using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
-using System.Linq;
-using System.Numerics;
-using JC = EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.Jacobian;
-using JCFD = EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.JacobianFD;
+using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson
 {
     /// <summary>
-    /// DC-like version of Newton-Raphson load flow algorithm
+    /// Assume all bus voltage is 1.0 
+    /// and calculate A usign J1 P/A only.
     /// </summary>
-    public class LFDC : NewtonRaphsonBase
+    public class LFDC : LFFastDecoupled
     {
-        override public Result<LFResult> Solve(EENetwork network,
-            double threshold = double.NaN, int maxIteration = 1)
+        JacobianBase _jc;
+
+        public LFDC()
         {
-            var res = new NRResult();
-            var Y = network.YMatrix;
-            var buses = Initialize(network.Buses);
-
-            // Step 1
-            // Determine classification of each bus
-            res.NRBuses = JC.ReIndexBusPQ(buses);
-
-            // Step 2
-            // Calculate J1 matrix
-            var jc = new JacobianFD();
-            var J1Matrix = jc.CreateJ1(Y, res.NRBuses);
-
-            // Step 3
-            // Prepare the matrix of injected power at each bus
-            var busesP = res.NRBuses.Buses.Select(b => b.Sbus.Real).ToArray();
-            var mxP = MD.Build.Dense(busesP.Length, 1, busesP);
-
-            // Step 4
-            // Solve for the voltage phase of each bus
-            var mxA = J1Matrix.Solve(mxP);
-
-            // Step 5
-            // Update bus voltage with calculated phase
-            foreach(var b in res.NRBuses.Buses)
-            {
-                var phase = mxA[b.Pidx, 0];
-                b.BusVoltage = Complex.FromPolarCoordinates(1.0, phase);
-            }
-
-            var lfres = CalcResult(network, buses, true);
-
-            //return res.NRBuses.AllBuses;
-            return new Result<LFResult>
-            {
-                Data = lfres,
-                IterationStop = 1,
-                Error = ErrorEnum.NoError,
-            };
+            _jc = new JacobianFD();
         }
+
+        /// <summary>
+        /// Only perform one iteration of calculation
+        /// </summary>
+        /// <param name="maxIteration">1</param>
+        /// <returns></returns>
+        public override Result<LFResult> Solve(EENetwork network, double threshold = 0.015, int maxIteration = 20)
+        {
+            return base.Solve(network, threshold, 1);
+        }
+
+        override internal void CalcJMatrix(MC YMatrix, NRResult nrRes)
+        {
+            // re-use J1
+            if (nrRes.J1Matrix == null)
+            {
+                nrRes.J1Matrix = _jc.CreateJ1(YMatrix, nrRes.NRBuses);
+                nrRes.J1LUMatrix = nrRes.J1Matrix.LU();
+            }
+        }
+
+        override internal void CalcAVDelta(NRResult nrRes)
+        {
+            var j1Size = nrRes.NRBuses.J1Size;
+            var j4Size = nrRes.NRBuses.J4Size;
+
+            var PDelta = nrRes.PQDelta.SubMatrix(0, j1Size.Row, 0, 1);
+            var ADelta = nrRes.J1LUMatrix.Solve(PDelta);
+            nrRes.ADelta = ADelta.ToColumnMajorArray();
+
+            var AVDelta = MD.Build.Dense(j1Size.Row + j4Size.Row, 1);
+            AVDelta.SetSubMatrix(0, 0, ADelta);
+            nrRes.AVDelta = AVDelta; // delta A and V
+        }
+
     }
 }

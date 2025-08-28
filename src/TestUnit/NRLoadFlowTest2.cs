@@ -17,7 +17,7 @@ namespace TestUnit
         [Fact]
         public void Calc_LoadFlow()
         {
-            var c = NRExample.LFSolve(_data2, false);
+            var c = NRExample.LFSolve(_data2, 0, false);
             Assert.True(c);
         }
 
@@ -25,7 +25,14 @@ namespace TestUnit
         public void Calc_LoadFlow_YData()
         {
             var data2Y = _ctx.LoadFlowData2Y;
-            var c = NRExample.LFSolve(data2Y, true);
+            var c = NRExample.LFSolve(data2Y, 0, true);
+            Assert.True(c);
+        }
+
+        [Fact]
+        public void Calc_Decoupled_LoadFlow()
+        {
+            var c = NRExample.LFSolve_Decoupled(_data2);
             Assert.True(c);
         }
 
@@ -46,7 +53,7 @@ namespace TestUnit
         [Fact]
         public void Calc_FastDecoupled_DCLike_LoadFlow()
         {
-            var c = NRExample.LFSolve_DCLike(_data2);
+            var c = NRExample.LFSolve_DCLike_Approximation(_data2);
             Assert.True(c);
         }
     }
