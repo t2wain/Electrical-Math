@@ -1,5 +1,6 @@
 ﻿using EEMathLib.DTO;
 using EEMathLib.LoadFlow.Data;
+using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +18,13 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     /// </summary>
     public abstract class NewtonRaphsonBase : ILFSolver
     {
+        protected NewtonRaphsonBase(JacobianBase jcm)
+        {
+            this.JCM = jcm;
+        }
+
+        public JacobianBase JCM { get; set; }
+
         #region Solve
 
         /// <summary>

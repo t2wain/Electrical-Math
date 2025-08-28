@@ -10,12 +10,8 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     /// </summary>
     public class LFFastDecoupled : NewtonRaphsonBase
     {
-        JacobianBase _jc;
-
-        public LFFastDecoupled()
-        {
-            _jc = new JacobianFD();
-        }
+        public LFFastDecoupled() : this(new JacobianFD()) { }
+        public LFFastDecoupled(JacobianBase jcm) : base(jcm) { }
 
         /// <summary>
         /// Carry over the J1 and J4 Jacobian matrices for used in 
@@ -52,12 +48,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             // re-use J1 and J4 matrices
             if (nrRes.J1Matrix == null)
             {
-                nrRes.J1Matrix = _jc.CreateJ1(YMatrix, nrRes.NRBuses);
+                nrRes.J1Matrix = JCM.CreateJ1(YMatrix, nrRes.NRBuses);
                 nrRes.J1LUMatrix = nrRes.J1Matrix.LU();
             }
             if (nrRes.J4Matrix == null)
             {
-                nrRes.J4Matrix = _jc.CreateJ4(YMatrix, nrRes.NRBuses);
+                nrRes.J4Matrix = JCM.CreateJ4(YMatrix, nrRes.NRBuses);
                 nrRes.J4LUMatrix = nrRes.J4Matrix.LU();
             }
         }

@@ -9,16 +9,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     /// </summary>
     public class LFNewtonRaphson : NewtonRaphsonBase
     {
-        JacobianBase _jc;
-
-        public LFNewtonRaphson()
-        {
-            _jc = new Jacobian();
-        }
+        public LFNewtonRaphson() : this(new Jacobian()) { }
+        public LFNewtonRaphson(JacobianBase jcm) : base(jcm) { }
 
         override internal void CalcJMatrix(MC YMatrix, NRResult nrRes)
         {
-            nrRes.JMatrix = _jc.CreateJMatrix(YMatrix, nrRes.NRBuses);
+            nrRes.JMatrix = JCM.CreateJMatrix(YMatrix, nrRes.NRBuses);
         }
 
         override internal void CalcAVDelta(NRResult nrRes)

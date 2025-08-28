@@ -1,5 +1,4 @@
 ﻿using EEMathLib.LoadFlow.Data;
-using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
 namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V3
 {
@@ -8,17 +7,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V3
     /// </summary>
     public class LFNewtonRaphsonV3 : LFNewtonRaphson
     {
-        JacobianBase _jc;
-
-        public LFNewtonRaphsonV3()
-        {
-            _jc = new JacobianV3();
-        }
-
-        override internal void CalcJMatrix(MC YMatrix, NRResult nrRes)
-        {
-            nrRes.JMatrix = _jc.CreateJMatrix(YMatrix, nrRes.NRBuses);
-        }
+        public LFNewtonRaphsonV3() : base(new JacobianV3()) { }
 
         override internal void CalcAVDelta(NRResult nrRes)
         {

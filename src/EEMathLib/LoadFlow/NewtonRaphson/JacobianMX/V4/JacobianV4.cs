@@ -2,14 +2,11 @@
 using System.Linq;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
-namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V2
+namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V4
 {
-    /// <summary>
-    /// Algorithm to calculate Jacobian matrix for Newton-Raphson load flow.
-    /// The formula are based on reference of another textbook.
-    /// </summary>
-    public class JacobianV2 : JacobianBase
+    public class JacobianV4 : JacobianBase
     {
+
         #region J1
 
         /// <summary>
@@ -25,12 +22,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V2
                 .Select(bn => {
                     var vn = bn.BusVoltage;
                     var ykn = Y[jk, bn.BusData.BusIndex];
-                    var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = ykn.Magnitude * vn.Magnitude * Math.Sign(a);
+                    var a = ykn.Phase - vk.Phase + vn.Phase;
+                    var s = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Sign(a);
                     return s;
                 })
                 .Aggregate((a, b) => a + b);
-            return -vk.Magnitude * skn;
+            return skn;
         }
 
         /// <summary>
@@ -42,9 +39,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V2
             var vk = bk.BusVoltage;
             var vn = bn.BusVoltage;
             var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-            var a = vk.Phase - ykn.Phase - vn.Phase;
+            var a = ykn.Phase - vk.Phase + vn.Phase;
             var jkn = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Sign(a);
-            return jkn;
+            return -jkn;
         }
 
         #endregion
@@ -61,16 +58,17 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V2
             var vk = bk.BusVoltage;
             var ykk = Y[jk, jk];
             var skk = nRBuses.AllBuses
+                .Where(bn => bn.BusData.BusIndex != jk)
                 .Select(bn =>
                 {
                     var vn = bn.BusVoltage;
                     var ykn = Y[jk, bn.BusData.BusIndex];
-                    var a = vk.Phase - ykn.Phase - vn.Phase;
+                    var a = ykn.Phase - vk.Phase + vn.Phase;
                     var s = ykn.Magnitude * vn.Magnitude * Math.Cos(a);
                     return s;
                 })
                 .Aggregate((a, b) => a + b);
-            var i = vk.Magnitude * ykk.Real;
+            var i = 2 * vk.Magnitude * ykk.Real;
             return i + skk;
         }
 
@@ -83,7 +81,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V2
             var vk = bk.BusVoltage;
             var vn = bk.BusVoltage;
             var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-            var a = vk.Phase - ykn.Phase - vn.Phase;
+            var a = ykn.Phase - vk.Phase + vn.Phase;
             var jkn = vk.Magnitude * ykn.Magnitude * Math.Cos(a);
             return jkn;
         }
@@ -106,12 +104,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V2
                 {
                     var vn = bn.BusVoltage;
                     var ykn = Y[jk, bn.BusData.BusIndex];
-                    var a = vk.Phase - ykn.Phase - vn.Phase;
-                    var s = ykn.Magnitude * vn.Magnitude * Math.Cos(a);
+                    var a = ykn.Phase - vk.Phase + vn.Phase;
+                    var s = vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Cos(a);
                     return s;
                 })
                 .Aggregate((a, b) => a + b);
-            return vk.Magnitude * skk;
+            return skk;
         }
 
         /// <summary>
@@ -123,7 +121,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V2
             var vk = bk.BusVoltage;
             var vn = bn.BusVoltage;
             var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-            var a = vk.Phase - ykn.Phase - vn.Phase;
+            var a = ykn.Phase - vk.Phase + vn.Phase;
             var jkn = -vk.Magnitude * ykn.Magnitude * vn.Magnitude * Math.Cos(a);
             return jkn;
         }
@@ -142,17 +140,18 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V2
             var vk = bk.BusVoltage;
             var ykk = Y[jk, jk];
             var skk = nRBuses.AllBuses
+                .Where(bn => bn.BusData.BusIndex != jk)
                 .Select(bn =>
                 {
                     var vn = bn.BusVoltage;
                     var ykn = Y[jk, bn.BusData.BusIndex];
-                    var a = vk.Phase - ykn.Phase - vn.Phase;
+                    var a = ykn.Phase - vk.Phase + vn.Phase;
                     var s = ykn.Magnitude * vn.Magnitude * Math.Sign(a);
                     return s;
                 })
                 .Aggregate((a, b) => a + b);
-            var i = -vk.Magnitude * ykk.Imaginary * Math.Sin(ykk.Phase);
-            return i + skk;
+            var i = -2 * vk.Magnitude * ykk.Imaginary;
+            return i - skk;
         }
 
         /// <summary>
@@ -164,12 +163,11 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V2
             var vk = bk.BusVoltage;
             var vn = bn.BusVoltage;
             var ykn = Y[bk.BusData.BusIndex, bn.BusData.BusIndex];
-            var a = vk.Phase - ykn.Phase - vn.Phase;
+            var a = ykn.Phase - vk.Phase + vn.Phase;
             var jkn = vk.Magnitude * ykn.Magnitude * Math.Sign(a);
-            return jkn;
+            return -jkn;
         }
 
         #endregion
-
     }
 }

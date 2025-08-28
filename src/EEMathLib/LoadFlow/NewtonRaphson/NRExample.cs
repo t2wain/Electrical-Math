@@ -3,6 +3,7 @@ using EEMathLib.LoadFlow.GaussSeidel;
 using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
 using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V2;
 using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V3;
+using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.V4;
 using EEMathLib.MatrixMath;
 using System.Linq;
 using JC = EEMathLib.LoadFlow.NewtonRaphson.JacobianMX.Jacobian;
@@ -174,10 +175,13 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             switch (algoVer)
             {
                 case 2:
-                    solver = new LFNewtonRaphsonV2();
+                    solver = new LFNewtonRaphson(new JacobianV2());
                     break;
                 case 3:
                     solver = new LFNewtonRaphsonV3();
+                    break;
+                case 4:
+                    solver = new LFNewtonRaphson(new JacobianV4());
                     break;
                 default:
                     solver = new LFNR();

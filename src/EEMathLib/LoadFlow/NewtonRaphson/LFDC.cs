@@ -1,5 +1,4 @@
 ﻿using EEMathLib.DTO;
-using EEMathLib.LoadFlow.NewtonRaphson.JacobianMX;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 using MD = MathNet.Numerics.LinearAlgebra.Matrix<double>;
 
@@ -11,13 +10,6 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     /// </summary>
     public class LFDC : LFFastDecoupled
     {
-        JacobianBase _jc;
-
-        public LFDC()
-        {
-            _jc = new JacobianFD();
-        }
-
         /// <summary>
         /// Only perform one iteration of calculation
         /// </summary>
@@ -33,7 +25,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             // re-use J1
             if (nrRes.J1Matrix == null)
             {
-                nrRes.J1Matrix = _jc.CreateJ1(YMatrix, nrRes.NRBuses);
+                nrRes.J1Matrix = JCM.CreateJ1(YMatrix, nrRes.NRBuses);
                 nrRes.J1LUMatrix = nrRes.J1Matrix.LU();
             }
         }

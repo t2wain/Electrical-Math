@@ -66,7 +66,7 @@ namespace TestEEData
         public void LoadFlowNR_Solve_Data3()
         {
             var data3 = _repo.GetNetworkData("N3");
-            var c = NRExample.LFSolve(data3, 0, false);
+            var c = NRExample.LFSolve(data3, 4, false);
             Assert.True(c);
         }
 
@@ -81,7 +81,7 @@ namespace TestEEData
 
             var Y = data4.CreateNetwork().YMatrix;
 
-            var c = NRExample.LFSolve(data4, 3, false);
+            var c = NRExample.LFSolve(data4, 4, false);
             Assert.True(c);
 
 

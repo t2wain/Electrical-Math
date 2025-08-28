@@ -56,6 +56,16 @@ namespace TestUnit
             Assert.True(c);
         }
 
+        [Fact]
+        public void Calc_LoadFlow_All_Versions()
+        {
+            foreach (var i in Enumerable.Range(1, 5))
+            {
+                var c = NRExample.LFSolve(_data2, i, false);
+            }
+        }
+
+
         #endregion
 
     }

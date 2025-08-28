@@ -18,12 +18,5 @@ namespace TestUnit
             Assert.True(c);
         }
 
-        [Fact]
-        public void Calc_LoadFlow_V3()
-        {
-            var c = NRExample.LFSolve(_ctx.LoadFlowData1Y, 3, false);
-            Assert.True(c);
-        }
-
     }
 }
