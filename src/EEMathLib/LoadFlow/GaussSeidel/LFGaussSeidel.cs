@@ -18,10 +18,10 @@ namespace EEMathLib.LoadFlow.GaussSeidel
     {
         #region Solve
 
-        public Result<LFResult> Solve(EENetwork network, BU initBuses,
+        public Result<LFResult> Solve(LFNetwork network, BU initBuses,
             double threshold = 0.015, int maxIteration = 20)
         {
-            var buses = Initialize(network.Buses);
+            var buses = Initialize(network.EBuses);
             var dinit = initBuses.ToDictionary(b => b.ID);
             foreach (var bu in buses)
             {
@@ -37,17 +37,17 @@ namespace EEMathLib.LoadFlow.GaussSeidel
         }
 
 
-        public Result<LFResult> Solve(EENetwork network,
+        public Result<LFResult> Solve(LFNetwork network,
             double threshold = 0.0001, int maxIteration = 100)
         {
-            var buses = Initialize(network.Buses);
+            var buses = Initialize(network.EBuses);
             return SolveImplement(network, buses, threshold, maxIteration);
         }
 
         /// <summary>
         /// Calculate load flow
         /// </summary>
-        protected Result<LFResult> SolveImplement(EENetwork network, BU buses, 
+        protected Result<LFResult> SolveImplement(LFNetwork network, BU buses, 
             double threshold = 0.0001, int maxIteration = 100)
         {
             var Y = network.YMatrix;
@@ -98,7 +98,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
             // Calculate power flow in lines
             IEnumerable<LineResult> lineRes = null;
             if (res.IsSolution)
-                lineRes = LFC.CalcLinePower(network.Lines, buses);
+                lineRes = LFC.CalcLinePower(network.ELines, buses);
 
             // Prepare solution result
             var lfrres = new LFResult { Buses = buses, Lines = lineRes };

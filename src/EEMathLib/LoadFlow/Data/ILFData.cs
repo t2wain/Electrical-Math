@@ -11,7 +11,7 @@ namespace EEMathLib.LoadFlow.Data
     /// </summary>
     public interface ILFData : IDisposable
     {
-        EENetwork CreateNetwork();
+        LFNetwork CreateNetwork();
 
         /// <summary>
         /// Bus input data

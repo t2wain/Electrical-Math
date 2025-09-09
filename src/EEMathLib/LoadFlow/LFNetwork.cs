@@ -1,4 +1,5 @@
-﻿using EEMathLib.LoadFlow.Data;
+﻿using EEMathLib.DTO;
+using EEMathLib.LoadFlow.Data;
 using MathNet.Numerics.LinearAlgebra;
 using System;
 using System.Collections.Generic;
@@ -7,18 +8,17 @@ using System.Numerics;
 
 namespace EEMathLib.LoadFlow
 {
-    public class EENetwork : IDisposable
+    public class LFNetwork : ENetwork, IDisposable
     {
         ILFData _data;
 
-        public EENetwork(ILFData data)
+        public LFNetwork(ILFData data)
         {
             this._data = data;
         }
 
-        public IEnumerable<EEBus> Buses => _data.Busses;
-        public IEnumerable<EELine> Lines => _data.Lines;
-        public Matrix<Complex> YMatrix { get; set; }
+        public IEnumerable<EEBus> EBuses => _data.Busses;
+        public IEnumerable<EELine> ELines => _data.Lines;
 
         /// <summary>
         /// Assign consecutive indices to buses, 
@@ -26,17 +26,17 @@ namespace EEMathLib.LoadFlow
         /// </summary>
         public void BuildIndex() 
         {
-            var qbus = Buses
+            var qbus = EBuses
                 .OrderBy(b => b.BusType == BusTypeEnum.Slack ? 0 : 1)
-                .Zip(Enumerable.Range(0, this.Buses.Count()),
+                .Zip(Enumerable.Range(0, this.EBuses.Count()),
                     (bus, index) => { bus.BusIndex = index; return bus; })
                 .ToList();
         }
 
         public void AssignBusToLine()
         {
-            var d = Buses.ToDictionary(b => b.ID);
-            foreach (var l in Lines)
+            var d = EBuses.ToDictionary(b => b.ID);
+            foreach (var l in ELines)
             {
                 if (d.TryGetValue(l.FromBusID, out var fromBus))
                 {
@@ -60,14 +60,14 @@ namespace EEMathLib.LoadFlow
             {
                 var i = l.FromBus.BusIndex;
                 var j = l.ToBus.BusIndex;
-                var yl = (1 / l.ZImpSeries) + (l.YImpShunt / 2);
+                var yl = (1 / l.ZSeries) + (l.YShunt / 2);
 
                 var yii = Y[i, i];
                 var yjj = Y[j, j];
                 var yij = Y[i, j];
                 var yji = Y[i, j];
 
-                var y = 1 / l.ZImpSeries;
+                var y = 1 / l.ZSeries;
                 Y[i, i] += yl;
                 Y[j, j] += yl;
                 Y[i, j] -= y;
@@ -75,6 +75,10 @@ namespace EEMathLib.LoadFlow
             }
             YMatrix = Y;
         }
+
+
+        public override IEnumerable<IEBus> Buses => EBuses;
+        public override IEnumerable<IELine> Lines => ELines;
 
         public void Dispose()
         {

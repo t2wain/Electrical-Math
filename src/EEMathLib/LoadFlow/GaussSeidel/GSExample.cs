@@ -18,7 +18,7 @@ namespace EEMathLib.LoadFlow.GaussSeidel
         public static bool CalcVoltage(ILFData data)
         {
             var nw = data.CreateNetwork();
-            var buses = LFGS.Initialize(nw.Buses);
+            var buses = LFGS.Initialize(nw.EBuses);
             var bus = buses.FirstOrDefault(b => b.ID == "2");
             var v = LFGS.CalcBusVoltage(bus, nw.YMatrix, buses);
 

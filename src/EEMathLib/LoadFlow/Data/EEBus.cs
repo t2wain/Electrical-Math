@@ -1,4 +1,4 @@
-﻿using System.Runtime;
+﻿using EEMathLib.DTO;
 
 namespace EEMathLib.LoadFlow.Data
 {
@@ -10,17 +10,10 @@ namespace EEMathLib.LoadFlow.Data
         Isolated = 3 // Isolated bus
     }
 
-    public interface IEntity
-    {
-        int BusIndex { get; set; }
-        string ID { get; set; }
-        int EntityType { get; }
-    }
-
     /// <summary>
     /// Bus input data for load flow analysis.
     /// </summary>
-    public class EEBus : IEntity
+    public class EEBus : IEBus
     {
         public int BusIndex { get; set; }
         public string ID { get; set; }

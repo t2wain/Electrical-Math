@@ -33,10 +33,10 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// </summary>
         /// <param name="network"></param>
         /// <param name="initBuses">Provide starting condition for the buses</param>
-        public virtual Result<LFResult> Solve(EENetwork network, BU initBuses,
+        public virtual Result<LFResult> Solve(LFNetwork network, BU initBuses,
             double threshold = 0.015, int maxIteration = 20)
         {
-            var buses = Initialize(network.Buses);
+            var buses = Initialize(network.EBuses);
             var dinit = initBuses.ToDictionary(b => b.ID);
             foreach (var bu in buses)
             {
@@ -54,17 +54,17 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// <summary>
         /// Start the power flow calculation
         /// </summary>
-        public virtual Result<LFResult> Solve(EENetwork network,
+        public virtual Result<LFResult> Solve(LFNetwork network,
             double threshold = 0.015, int maxIteration = 20)
         {
-            var buses = Initialize(network.Buses);
+            var buses = Initialize(network.EBuses);
             return SolveImplement(network, buses, threshold, maxIteration);
         }
 
         /// <summary>
         /// Calculate Newton-Raphson load flow
         /// </summary>
-        protected virtual Result<LFResult> SolveImplement(EENetwork network, BU buses,
+        protected virtual Result<LFResult> SolveImplement(LFNetwork network, BU buses,
             double threshold = 0.015, int maxIteration = 20)
         {
             var Y = network.YMatrix;
@@ -326,12 +326,12 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
         }
 
-        internal static LFResult CalcResult(EENetwork network, BU buses, bool isSolution)
+        internal static LFResult CalcResult(LFNetwork network, BU buses, bool isSolution)
         {
             // Calculate power flow in lines
             IEnumerable<LineResult> lineRes = null;
             if (isSolution)
-                lineRes = LFC.CalcLinePower(network.Lines, buses);
+                lineRes = LFC.CalcLinePower(network.ELines, buses);
 
             // Prepare solution result
             var lfrres = new LFResult { Buses = buses, Lines = lineRes };

@@ -41,7 +41,7 @@ namespace EEMathLib.LoadFlow.Data
     /// </summary>
     public abstract class LFDataAbstract : ILFData
     {
-        EENetwork _network = null;
+        LFNetwork _network = null;
 
         protected double _BasePower;
         protected IEnumerable<EEBus> _Busses; 
@@ -55,11 +55,11 @@ namespace EEMathLib.LoadFlow.Data
 
         public MxDTO<Complex> YResult => _YResult;
 
-        public virtual EENetwork CreateNetwork()
+        public virtual LFNetwork CreateNetwork()
         {
             if (_network == null)
             {
-                _network = new EENetwork(this);
+                _network = new LFNetwork(this);
                 _network.AssignBusToLine();
                 _network.BuildYImp();
             }

@@ -23,7 +23,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         public static bool Calc_PQDelta_Partial(LFData data)
         {
             var nw = data.CreateNetwork();
-            var buses = LFNR.Initialize(nw.Buses);
+            var buses = LFNR.Initialize(nw.EBuses);
             var nrBuses = JC.ReIndexBusPQ(buses);
 
             var bus2 = nrBuses.Buses.FirstOrDefault(b => b.ID == "2");
@@ -43,7 +43,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         public static bool Calc_J1_Partial(LFData data)
         {
             var nw = data.CreateNetwork();
-            var buses = LFNR.Initialize(nw.Buses);
+            var buses = LFNR.Initialize(nw.EBuses);
             var nrBuses = JC.ReIndexBusPQ(buses);
 
             var jc = new Jacobian();

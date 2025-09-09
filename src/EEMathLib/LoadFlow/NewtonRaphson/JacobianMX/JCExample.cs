@@ -25,7 +25,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX
             var nw = data.CreateNetwork();
             // using YMatrix data instead of calculated value
             nw.YMatrix = MX.ParseMatrix(data.YResult);
-            var buses = NR.Initialize(nw.Buses);
+            var buses = NR.Initialize(nw.EBuses);
             var nrBuses = JC.ReIndexBusPQ(buses);
 
             Matrix<double> J1, J2, J3, J4;
@@ -54,7 +54,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX
             var nw = data.CreateNetwork();
             // using YMatrix data instead of calculated value
             nw.YMatrix = MX.ParseMatrix(data.YResult);
-            var buses = NR.Initialize(nw.Buses);
+            var buses = NR.Initialize(nw.EBuses);
             var nrBuses = JC.ReIndexBusPQ(buses);
 
             var jc = new Jacobian();
@@ -82,7 +82,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX
             var nw = data.CreateNetwork();
             // using YMatrix data instead of calculated value
             nw.YMatrix = MX.ParseMatrix(data.YResult);
-            var buses = NR.Initialize(nw.Buses);
+            var buses = NR.Initialize(nw.EBuses);
             var nrBuses = JC.ReIndexBusPQ(buses);
             var lstErr = new List<(string JID, string BusID, double value)>();
             var JRes = data.GetNewtonRaphsonData(iteration).JacobianData;
@@ -198,7 +198,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson.JacobianMX
             var nw = data.CreateNetwork();
             // using YMatrix data instead of calculated value
             nw.YMatrix = MX.ParseMatrix(data.YResult);
-            var buses = NR.Initialize(nw.Buses);
+            var buses = NR.Initialize(nw.EBuses);
             var nrBuses = JC.ReIndexBusPQ(buses);
             var lstErr = new List<(string JID, string RowID, string ColID)>();
             var JRes = data.GetNewtonRaphsonData(iteration).JacobianData;

@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using EEMathLib.DTO;
+using System.Numerics;
 
 namespace EEMathLib.LoadFlow.Data
 {
@@ -12,7 +13,7 @@ namespace EEMathLib.LoadFlow.Data
     /// <summary>
     /// Line input data for load flow analysis.
     /// </summary>
-    public class EELine : IEntity
+    public class EELine : IELine
     {
         public int BusIndex { get; set; }
         public string ID { get; set; }
@@ -42,11 +43,11 @@ namespace EEMathLib.LoadFlow.Data
         /// <summary>
         /// Line series Susceptance
         /// </summary>
-        public Complex ZImpSeries => new Complex(RSeries, XSeries);
+        public Complex ZSeries => new Complex(RSeries, XSeries);
         /// <summary>
         /// Line shunt admitance
         /// </summary>
-        public Complex YImpShunt => new Complex(GShunt, BShunt);
+        public Complex YShunt => new Complex(GShunt, BShunt);
 
         public double? PResult { get; set; }
         public double? QResult { get; set; }
@@ -56,5 +57,12 @@ namespace EEMathLib.LoadFlow.Data
 
         public double? IResult { get; set; }
         public double? IResultReverse { get; set; }
+
+        #region IELine
+
+        IEBus IELine.FromBus => this.FromBus;
+        IEBus IELine.ToBus => this.ToBus;
+
+        #endregion
     }
 }

@@ -15,7 +15,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         /// </summary>
         /// <param name="maxIteration">1</param>
         /// <returns></returns>
-        public override Result<LFResult> Solve(EENetwork network, double threshold = 0.015, int maxIteration = 20)
+        public override Result<LFResult> Solve(LFNetwork network, double threshold = 0.015, int maxIteration = 20)
         {
             return base.Solve(network, threshold, 1);
         }

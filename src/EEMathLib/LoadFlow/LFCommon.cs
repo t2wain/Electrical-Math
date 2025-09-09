@@ -68,11 +68,11 @@ namespace EEMathLib.LoadFlow
                 vi = buses[line.FromBus.ID].BusVoltage;
                 vj = buses[line.ToBus.ID].BusVoltage;
             }
-            var yseries = 1 / line.ZImpSeries;
-            var yshunt = line.YImpShunt;
+            var yseries = 1 / line.ZSeries;
+            var yshunt = line.YShunt;
             var sseries = vi * (vi - vj).Conjugate() * yseries.Conjugate();
             var sshunt = Complex.Zero;
-            if (line.YImpShunt.Magnitude > 0)
+            if (line.YShunt.Magnitude > 0)
                 sshunt = vi * (vi * yshunt / 2).Conjugate();
             var sline = sseries + sshunt;
             return sline;
@@ -102,7 +102,7 @@ namespace EEMathLib.LoadFlow
                 return (new Complex(pk, sk.Imaginary), BusTypeEnum.PV, qgen);
         }
 
-        public static bool ValidateLFResult(EENetwork network, LFResult res, double thresholdPct)
+        public static bool ValidateLFResult(LFNetwork network, LFResult res, double thresholdPct)
         {
             var c = true;
             bool v;
@@ -110,7 +110,7 @@ namespace EEMathLib.LoadFlow
             #region Validate buses
 
             var rbuses = res.Buses.ToDictionary(b => b.ID);
-            foreach (var dbus in network.Buses)
+            foreach (var dbus in network.EBuses)
             {
                 var rb = rbuses[dbus.ID];
 
@@ -153,7 +153,7 @@ namespace EEMathLib.LoadFlow
             #region Validate lines
 
             var rlines = res.Lines.ToDictionary(l => l.LineData.ID);
-            foreach (var dline in network.Lines)
+            foreach (var dline in network.ELines)
             {
                 var rl = rlines[dline.ID];
 
