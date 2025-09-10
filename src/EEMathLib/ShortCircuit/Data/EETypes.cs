@@ -15,6 +15,7 @@ namespace EEMathLib.ShortCircuit.Data
         string ID { get; }
         IEBus Data { get; }
         int BusIndex { get; set; }
+        bool Visited { get; set; }
     }
 
     public class ZBus : IZBus
@@ -22,6 +23,7 @@ namespace EEMathLib.ShortCircuit.Data
         public string ID { get; set; }
         public IEBus Data { get; set; }
         public int BusIndex { get; set; } = -1;
+        public bool Visited { get; set; }
     }
 
     public interface IEZElement
@@ -31,6 +33,7 @@ namespace EEMathLib.ShortCircuit.Data
         IZBus FromBus { get; }
         IZBus ToBus { get; }
         Complex Z { get; }
+        bool IsAddedToZMatrix { get; set; }
     }
 
     public class EZElement : IEZElement
@@ -40,6 +43,18 @@ namespace EEMathLib.ShortCircuit.Data
         public IZBus FromBus { get; set; }
         public IZBus ToBus { get; set; }
         public Complex Z { get; set; }
+        public bool IsAddedToZMatrix { get; set; }
+    }
+
+    public class Branch
+    {
+        public Branch(IEZElement el, IZBus toBus)
+        {
+            this.Element = el;
+            this.ToBus = toBus;
+        }
+        public IEZElement Element { get; set; }
+        public IZBus ToBus { get; set; }
     }
 
 }

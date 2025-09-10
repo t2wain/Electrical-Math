@@ -11,6 +11,12 @@ namespace EEMathLib.DTO
 
     }
 
+    public class Entity : IEntity
+    {
+        public string ID { get; set; }
+        public int EntityType { get; set;  }
+    }
+
     public interface IEZComp
     {
         Complex Zero { get; }
@@ -24,12 +30,26 @@ namespace EEMathLib.DTO
         double Voltage { get; set; }
     }
 
+    public class EBus : Entity, IEBus
+    {
+        public int BusIndex { get; set; }
+        public double Voltage { get; set; } = 1.0;
+    }
+
     public interface IELine : IEntity
     {
         IEBus FromBus { get; }
         IEBus ToBus { get; }
         Complex ZSeries { get; }
         Complex YShunt { get; }
+    }
+
+    public class ELine : Entity, IELine
+    {
+        public IEBus FromBus { get; set; }
+        public IEBus ToBus { get; set; }
+        public Complex ZSeries { get; set; }
+        public Complex YShunt { get; set; }
     }
 
     public interface IETransformer : IEntity

@@ -10,11 +10,13 @@ namespace EEMathLib.ShortCircuit.ZMX
 {
     public static class ZAlgoExtensions
     {
+        #region Initialize
+
         /// <summary>
         /// Create elements from a given network 
         /// to build impedance matrix
         /// </summary>
-        public static ZNetwork BuildZElements(this IENetwork nw, ZTypeEnum ztype)
+        public static ZNetwork BuildZNetwork(this IENetwork nw, ZTypeEnum ztype)
         {
 
             var dBus = nw.Buses
@@ -72,186 +74,159 @@ namespace EEMathLib.ShortCircuit.ZMX
                 lstEl.AddRange(loads);
             }
 
-            var N = nw.Buses.Count();
-            var zres = new ZNetwork
+            var znw = new ZNetwork
             {
                 Buses = dBus,
                 Elements = lstEl.Cast<IEZElement>().ToDictionary(e => e.Data.ID),
             };
 
-            return zres;
+            return znw;
         }
 
-        public static void BuildZMatrix(this ZNetwork nw)
+        public static IDictionary<string, List<Branch>> BuildGraph(this ZNetwork znw)
         {
-            var N = nw.Buses.Count();
-            nw.Z = MC.Build.Dense(N, N, Complex.Zero);
-
-            var dBus = new Dictionary<string, IZBus>();
-            var dElement = nw.Elements.Values.ToDictionary(e => e.ID);
-            nw.RemainElements = dElement;
-            nw.ExistBuses = dBus;
-
-            // case 1 : between ref bus to new bus
-            nw.AddElementsRefToNewBus();
-
-            // case 2 : between new bus and existing bus
-            nw.AddElementsNewToExistBus();
-
-            // case 3 : between ref bus to exist bus
-            nw.AddElementsRefToExistBus();
-
-            // case 4 : between new bus and existing bus
-            nw.AddElementsExistToExistBus();
-
-            if (dElement.Count > 0)
-                throw new Exception();
-        }
-
-        #region AddElementsRefToNewBus
-
-        public static void AddElementsRefToNewBus(this ZNetwork nw)
-        {
-            var q = nw.RemainElements.Values
-                .Where(e => nw.ValidateAddElementRefToNewBus(e))
-                .ToList();
-            foreach (var el in q)
+            var dBus = new Dictionary<string, List<Branch>> 
+            { 
+                { "ref", new List<Branch>() } 
+            };
+            foreach (var bus in znw.Buses.Values)
+                dBus.Add(bus.ID, new List<Branch>());
+            foreach(var el in znw.Elements.Values)
             {
-                var valid = nw.ValidateAddElementRefToNewBus(el);
-                if (valid)
-                {
-                    nw.AddElementRefToNewBus(el);
-                    nw.TrackAddElementRefToNewBus(el);
-                }
+                if (el.FromBus == null)
+                    dBus["ref"].Add(new Branch(el, el.ToBus));
+                else dBus[el.FromBus.ID].Add(new Branch(el, el.ToBus));
+                dBus[el.ToBus.ID].Add(new Branch(el, el.FromBus));
             }
-        }
-
-        public static void AddElementRefToNewBus(this ZNetwork nw, IEZElement element)
-        {
-            var bus = element.ToBus;
-            bus.BusIndex = nw.NextBusIndex;
-            var p = bus.BusIndex;
-            nw.Z[p, p] = element.Z;
+            return dBus;
         }
 
         #endregion
 
-        #region AddElementsNewToExistBus
+        #region Z Matrix
 
-        public static void AddElementsNewToExistBus(this ZNetwork nw)
+        public static void BuildZMatrix(this ZNetwork znw)
         {
-            var q = nw.RemainElements.Values
-                .Where(e => nw.ValidateAddElementNewToExistBus(e))
-                .ToList();
-            foreach (var el in q)
+            var N = znw.Buses.Count;
+            znw.Z = MC.Build.Dense(N, N);
+
+            // add z element to the matrix
+            // using breath-first algo
+            var g = znw.BuildGraph();
+            var qbus = new Queue<string>();
+            qbus.Enqueue("ref");
+            while (qbus.Count > 0)
             {
-                var valid = nw.ValidateAddElementNewToExistBus(el);
-                if (valid)
+                var bid = qbus.Dequeue();
+                var branches = g[bid]
+                    .Where(i => !i.Element.IsAddedToZMatrix)
+                    .ToList();
+                foreach (var br in branches)
                 {
-                    var fb = el.FromBus;
-                    var tb = el.ToBus;
-                    var existBus = nw.ExistBuses.ContainsKey(fb.ID) ? fb : tb;
-                    var newBus = !nw.ExistBuses.ContainsKey(fb.ID) ? fb : tb;
-                    nw.AddElementNewToExistBus(el, newBus, existBus);
-                    nw.TrackAddElementNewToExistBus(el, newBus);
+                    if (br.Element.IsAddedToZMatrix)
+                        continue;
+
+                    if (br.ToBus is IZBus bus && !bus.Visited)
+                    {
+                        bus.Visited = true;
+                        qbus.Enqueue(bus.ID);
+                    }
+
+                    var el = br.Element;
+                    if (el.ValidateAddElementRefToNewBus())
+                        znw.AddElementRefToNewBus(el);
+                    else if (el.ValidateAddElementNewToExistBus())
+                        znw.AddElementNewToExistBus(el);
+                    else if (el.ValidateAddElementRefToExistBus())
+                        znw.AddElementRefToExistBus(el);
+                    else if (el.ValidateAddElementExistToExistBus())
+                        znw.AddElementExistToExistBus(el);
+                    else throw new Exception();
+
+                    el.IsAddedToZMatrix = true;
                 }
             }
         }
 
-        public static void AddElementNewToExistBus(this ZNetwork nw, IEZElement element, IZBus newBus, IZBus existBus)
+        static void AddElementRefToNewBus(this ZNetwork znw, IEZElement element)
         {
+            var bus = element.ToBus;
+            bus.BusIndex = znw.NextBusIndex;
+            var p = bus.BusIndex;
+            znw.Z[p, p] = element.Z;
+        }
+
+        static void AddElementNewToExistBus(this ZNetwork znw, IEZElement element)
+        {
+            var fb = element.FromBus;
+            var tb = element.ToBus;
+            var existBus = fb.BusIndex >= 0 ? fb : tb;
+            var newBus = fb.BusIndex < 0 ? fb : tb;
+
             var p = existBus.BusIndex;
-            newBus.BusIndex = nw.NextBusIndex;
+            newBus.BusIndex = znw.NextBusIndex;
             var q = newBus.BusIndex;
 
-            var zpq = nw.Z[p, q];
-            nw.Z[q, q] = zpq + element.Z;
-            foreach(var i in Enumerable.Range(0, nw.LastBusIndex))
+            var zpq = znw.Z[p, q];
+            znw.Z[q, q] = zpq + element.Z;
+            foreach(var i in Enumerable.Range(0, znw.LastBusIndex))
             {
-                nw.Z[q, i] = nw.Z[p, i];
-                nw.Z[i, q] = nw.Z[i, p];    
+                znw.Z[q, i] = znw.Z[p, i];
+                znw.Z[i, q] = znw.Z[i, p];    
             }
         }
 
-        #endregion
-
-        #region AddElementsRefToExistBus
-
-        public static void AddElementsRefToExistBus(this ZNetwork nw)
+        static void AddElementRefToExistBus(this ZNetwork znw, IEZElement element)
         {
-            var q = nw.RemainElements.Values
-                .Where(e => nw.ValidateAddElementRefToExistBus(e))
-                .ToList();
-            foreach (var el in q)
-            {
-                var valid = nw.ValidateAddElementRefToExistBus(el);
-                if (valid)
-                {
-                    nw.AddElementRefToExistBus(el);
-                    nw.TrackAddElementRefToExistBus(el);
-                }
-            }
-        }
-
-        public static bool AddElementRefToExistBus(this ZNetwork nw, IEZElement element)
-        {
-            var bus = element.ToBus;
-            if (element.FromBus != null || !nw.ExistBuses.ContainsKey(bus.ID))
-                return false;
-
             var q = element.ToBus.BusIndex;
-            var dz = MC.Build.Dense(nw.LastBusIndex, 1, Complex.Zero);
-            foreach (var i in Enumerable.Range(0, nw.LastBusIndex))
+            var dz = MC.Build.Dense(znw.LastBusIndex, 1, Complex.Zero);
+            foreach (var i in Enumerable.Range(0, znw.LastBusIndex))
             {
-                dz[i, 0] = -nw.Z[i, q];
+                dz[i, 0] = -znw.Z[i, q];
             }
-            var zll = nw.Z[q, q] + element.Z;
+            var zll = znw.Z[q, q] + element.Z;
             var md = dz * dz.Transpose() / zll;
 
             foreach(var i in Enumerable.Range(0, md.RowCount))
                 foreach(var j in Enumerable.Range(0, md.ColumnCount))
-                    nw.Z[i, j] -= md[i, j];
-
-            nw.RemainElements.Remove(element.ID);
-            return true;
+                    znw.Z[i, j] -= md[i, j];
         }
 
-        #endregion
-
-        #region AddElementsExistToExistBus
-
-        public static void AddElementsExistToExistBus(this ZNetwork nw)
-        {
-            var q = nw.RemainElements.Values
-                .Where(e => nw.ValidateAddElementExistToExistBus(e))
-                .ToList();
-            foreach (var el in q)
-            {
-                var valid = nw.ValidateAddElementExistToExistBus(el);
-                if (valid)
-                {
-                    nw.AddElementExistToExistBus(el);
-                    nw.TrackAddElementExistToExistBus(el);
-                }
-            }
-        }
-
-        public static void AddElementExistToExistBus(this ZNetwork nw, IEZElement element)
+        static void AddElementExistToExistBus(this ZNetwork znw, IEZElement element)
         {
             var p = element.FromBus.BusIndex;
             var q = element.ToBus.BusIndex;
-            var dz = MC.Build.Dense(nw.LastBusIndex, 1, Complex.Zero);
-            foreach (var i in Enumerable.Range(0, nw.LastBusIndex))
+            var dz = MC.Build.Dense(znw.LastBusIndex, 1, Complex.Zero);
+            foreach (var i in Enumerable.Range(0, znw.LastBusIndex))
             {
-                dz[i, 0] = nw.Z[i, q] - nw.Z[i, p];
+                dz[i, 0] = znw.Z[i, q] - znw.Z[i, p];
             }
-            var zll = element.Z + nw.Z[p, p] + nw.Z[q, q] - 2 * nw.Z[p, q];
+            var zll = element.Z + znw.Z[p, p] + znw.Z[q, q] - 2 * znw.Z[p, q];
             var md = dz * dz.Transpose() / zll;
 
             foreach (var i in Enumerable.Range(0, md.RowCount))
                 foreach (var j in Enumerable.Range(0, md.ColumnCount))
-                    nw.Z[i, j] -= md[i, j];
+                    znw.Z[i, j] -= md[i, j];
         }
+
+
+        static bool ValidateAddElementRefToNewBus(this IEZElement element) =>
+            element.FromBus != null && element.FromBus.BusIndex < 0;
+
+        static bool ValidateAddElementNewToExistBus(this IEZElement element)
+        {
+            var fbIdx = element.FromBus.BusIndex;
+            var tbIdx = element.ToBus.BusIndex;
+            return (fbIdx >= 0 && tbIdx < 0)
+                || (fbIdx < 0 && tbIdx >= 0);
+        }
+
+        static bool ValidateAddElementRefToExistBus(this IEZElement element) =>
+            element.FromBus == null && element.ToBus.BusIndex >= 0;
+
+        static bool ValidateAddElementExistToExistBus(this IEZElement element) =>
+            element.FromBus.BusIndex >= 0 && element.ToBus.BusIndex >= 0;
+
 
         #endregion
 
