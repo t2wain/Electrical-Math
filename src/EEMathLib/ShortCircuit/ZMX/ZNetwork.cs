@@ -31,6 +31,6 @@ namespace EEMathLib.ShortCircuit.ZMX
         /// Assign the next bus index to the new bus
         /// added to the Z matrix.
         /// </summary>
-        internal int NextBusIndex => ++LastBusIndex;
+        internal int GetNextBusIndex() => ++LastBusIndex;
     }
 }

@@ -1,4 +1,5 @@
 ﻿using EEMathLib.DTO;
+using EEMathLib.ShortCircuit.ZMX;
 using MathNet.Numerics.LinearAlgebra;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,82 +7,29 @@ using System.Numerics;
 
 namespace EEMathLib.ShortCircuit.Data
 {
-    public abstract class NetworkAbstract : IENetwork
+    public class ZNetwork1 : ZNetwork
     {
-        public IEnumerable<IEBus> Buses { get; set; } = Enumerable.Empty<IEBus>();
-        public IEnumerable<IELine> Lines { get; set; } = Enumerable.Empty<IELine>();
-        public IEnumerable<IETransformer> Transformers { get; set; } = Enumerable.Empty<IETransformer>();
-        public IEnumerable<IEGen> Generators { get; set; } = Enumerable.Empty<IEGen>();
-        public IEnumerable<IELoad> Loads { get; set; } = Enumerable.Empty<IELoad>();
-        public Matrix<Complex> YMatrix { get; set; }
-
-    }
-
-    public class Network1 : NetworkAbstract
-    {
-        public Network1()
+        public ZNetwork1()
         {
-            Buses = new List<IEBus>
+            Buses = new Dictionary<string, IZBus>
             {
-                new EBus { ID = "1", BusIndex = 0 },
-                new EBus { ID = "2", BusIndex = 1 },
-                new EBus { ID = "3", BusIndex = 2 },
-                new EBus { ID = "4", BusIndex = 3 },
-                new EBus { ID = "5", BusIndex = 4 },
+                { "1", new ZBus { ID = "1" } },
+                { "2", new ZBus { ID = "2" } },
+                { "3", new ZBus { ID = "3" } },
+                { "4", new ZBus { ID = "4" } },
             };
 
-            var dbus = Buses.ToDictionary(b =>  b.ID);
-
-            Lines = new List<IELine>
+            Elements = new Dictionary<string, IEZElement>
             {
-                new ELine 
-                { 
-                    ID = "1", 
-                    ZSeries = new Complex(0, 0.1), 
-                    ToBus = dbus["1"] 
-                },
-                new ELine 
-                { 
-                    ID = "2", 
-                    ZSeries = new Complex(0, 0.1), 
-                    ToBus = dbus["2"] 
-                },
-                new ELine 
-                { 
-                    ID = "3", 
-                    ZSeries = new Complex(0, 0.2), 
-                    FromBus = dbus["2"], 
-                    ToBus = dbus["1"] 
-                },
-                new ELine 
-                { 
-                    ID = "4", 
-                    ZSeries = new Complex(0, 0.3), 
-                    FromBus = dbus["2"], 
-                    ToBus = dbus["3"] 
-                },
-                new ELine 
-                { 
-                    ID = "5", 
-                    ZSeries = new Complex(0, 0.15), 
-                    FromBus = dbus["3"], 
-                    ToBus = dbus["4"] 
-                },
-                new ELine 
-                { 
-                    ID = "6", 
-                    ZSeries = new Complex(0, 0.25),
-                    FromBus = dbus["1"],
-                    ToBus = dbus["4"]
-                },
-                new ELine 
-                { 
-                    ID = "7", 
-                    ZSeries = new Complex(0, 0.4),
-                    FromBus = dbus["2"],
-                    ToBus = dbus["4"]
-                },
+                { "1", new EZElement { ID = "1", ToBus = Buses["1"], Z = new Complex(0, 0.1) } },
+                { "2", new EZElement { ID = "2", ToBus = Buses["2"], Z = new Complex(0, 0.1) } },
+                { "3", new EZElement { ID = "3", FromBus = Buses["1"], ToBus = Buses["2"], Z = new Complex(0, 0.2) } },
+                { "4", new EZElement { ID = "4", FromBus = Buses["2"], ToBus = Buses["3"], Z = new Complex(0, 0.3) } },
+                { "5", new EZElement { ID = "5", FromBus = Buses["3"], ToBus = Buses["4"], Z = new Complex(0, 0.15) } },
+                { "6", new EZElement { ID = "6", FromBus = Buses["1"], ToBus = Buses["4"], Z = new Complex(0, 0.25) } },
+                { "7", new EZElement { ID = "7", FromBus = Buses["2"], ToBus = Buses["4"], Z = new Complex(0, 0.4) } },
             };
+
         }
     }
 }

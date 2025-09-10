@@ -135,10 +135,10 @@ namespace EEMathLib.ShortCircuit.ZMX
                     var el = br.Element;
                     if (el.ValidateAddElementRefToNewBus())
                         znw.AddElementRefToNewBus(el);
-                    else if (el.ValidateAddElementNewToExistBus())
-                        znw.AddElementNewToExistBus(el);
                     else if (el.ValidateAddElementRefToExistBus())
                         znw.AddElementRefToExistBus(el);
+                    else if (el.ValidateAddElementNewToExistBus())
+                        znw.AddElementNewToExistBus(el);
                     else if (el.ValidateAddElementExistToExistBus())
                         znw.AddElementExistToExistBus(el);
                     else throw new Exception();
@@ -148,15 +148,15 @@ namespace EEMathLib.ShortCircuit.ZMX
             }
         }
 
-        static void AddElementRefToNewBus(this ZNetwork znw, IEZElement element)
+        public static void AddElementRefToNewBus(this ZNetwork znw, IEZElement element)
         {
             var bus = element.ToBus;
-            bus.BusIndex = znw.NextBusIndex;
+            bus.BusIndex = znw.GetNextBusIndex();
             var p = bus.BusIndex;
             znw.Z[p, p] = element.Z;
         }
 
-        static void AddElementNewToExistBus(this ZNetwork znw, IEZElement element)
+        public static void AddElementNewToExistBus(this ZNetwork znw, IEZElement element)
         {
             var fb = element.FromBus;
             var tb = element.ToBus;
@@ -164,56 +164,58 @@ namespace EEMathLib.ShortCircuit.ZMX
             var newBus = fb.BusIndex < 0 ? fb : tb;
 
             var p = existBus.BusIndex;
-            newBus.BusIndex = znw.NextBusIndex;
+            newBus.BusIndex = znw.GetNextBusIndex();
             var q = newBus.BusIndex;
 
-            var zpq = znw.Z[p, q];
-            znw.Z[q, q] = zpq + element.Z;
-            foreach(var i in Enumerable.Range(0, znw.LastBusIndex))
+            var zpp = znw.Z[p, p];
+            znw.Z[q, q] = zpp + element.Z;
+            foreach (var i in Enumerable.Range(0, znw.LastBusIndex))
             {
                 znw.Z[q, i] = znw.Z[p, i];
                 znw.Z[i, q] = znw.Z[i, p];    
             }
         }
 
-        static void AddElementRefToExistBus(this ZNetwork znw, IEZElement element)
+        public static void AddElementRefToExistBus(this ZNetwork znw, IEZElement element)
         {
             var q = element.ToBus.BusIndex;
-            var dz = MC.Build.Dense(znw.LastBusIndex, 1, Complex.Zero);
-            foreach (var i in Enumerable.Range(0, znw.LastBusIndex))
+            var dz = MC.Build.Dense(znw.LastBusIndex + 1, 1, Complex.Zero);
+            var N = znw.LastBusIndex + 1;
+            foreach (var i in Enumerable.Range(0, N))
             {
                 dz[i, 0] = -znw.Z[i, q];
             }
             var zll = znw.Z[q, q] + element.Z;
             var md = dz * dz.Transpose() / zll;
 
-            foreach(var i in Enumerable.Range(0, md.RowCount))
-                foreach(var j in Enumerable.Range(0, md.ColumnCount))
+            foreach(var i in Enumerable.Range(0, N))
+                foreach(var j in Enumerable.Range(0, N))
                     znw.Z[i, j] -= md[i, j];
         }
 
-        static void AddElementExistToExistBus(this ZNetwork znw, IEZElement element)
+        public static void AddElementExistToExistBus(this ZNetwork znw, IEZElement element)
         {
             var p = element.FromBus.BusIndex;
             var q = element.ToBus.BusIndex;
-            var dz = MC.Build.Dense(znw.LastBusIndex, 1, Complex.Zero);
-            foreach (var i in Enumerable.Range(0, znw.LastBusIndex))
+            var N = znw.LastBusIndex + 1;
+            var dz = MC.Build.Dense(N, 1, Complex.Zero);
+            foreach (var i in Enumerable.Range(0, N))
             {
                 dz[i, 0] = znw.Z[i, q] - znw.Z[i, p];
             }
             var zll = element.Z + znw.Z[p, p] + znw.Z[q, q] - 2 * znw.Z[p, q];
             var md = dz * dz.Transpose() / zll;
 
-            foreach (var i in Enumerable.Range(0, md.RowCount))
-                foreach (var j in Enumerable.Range(0, md.ColumnCount))
+            foreach (var i in Enumerable.Range(0, N))
+                foreach (var j in Enumerable.Range(0, N))
                     znw.Z[i, j] -= md[i, j];
         }
 
 
-        static bool ValidateAddElementRefToNewBus(this IEZElement element) =>
-            element.FromBus != null && element.FromBus.BusIndex < 0;
+        public static bool ValidateAddElementRefToNewBus(this IEZElement element) =>
+            element.FromBus == null && element.ToBus.BusIndex < 0;
 
-        static bool ValidateAddElementNewToExistBus(this IEZElement element)
+        public static bool ValidateAddElementNewToExistBus(this IEZElement element)
         {
             var fbIdx = element.FromBus.BusIndex;
             var tbIdx = element.ToBus.BusIndex;
@@ -221,10 +223,10 @@ namespace EEMathLib.ShortCircuit.ZMX
                 || (fbIdx < 0 && tbIdx >= 0);
         }
 
-        static bool ValidateAddElementRefToExistBus(this IEZElement element) =>
+        public static bool ValidateAddElementRefToExistBus(this IEZElement element) =>
             element.FromBus == null && element.ToBus.BusIndex >= 0;
 
-        static bool ValidateAddElementExistToExistBus(this IEZElement element) =>
+        public static bool ValidateAddElementExistToExistBus(this IEZElement element) =>
             element.FromBus.BusIndex >= 0 && element.ToBus.BusIndex >= 0;
 
 
