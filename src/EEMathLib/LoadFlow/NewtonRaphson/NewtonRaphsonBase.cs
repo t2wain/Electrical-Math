@@ -193,6 +193,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return nrRes;
         }
 
+        /// <summary>
+        /// Calculate the PQ delta required for each iteration
+        /// </summary>
         internal static void CalcDeltaPQ(MC Y, NRResult nrRes)
         {
             var nrBuses = nrRes.NRBuses;
@@ -220,6 +223,10 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
         }
 
+        /// <summary>
+        /// Check if the LF algorithm has finally converged
+        /// below the threshold.
+        /// </summary>
         internal static bool CheckSolution(NRResult res, double threshold)
         {
             res.MaxErr = res.PQDelta
@@ -240,6 +247,11 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             UpdatePVBusStatus(YMatrix, nrRes);
         }
 
+        /// <summary>
+        /// Calculate the Q and A for all PV bus
+        /// and determine if the bus status
+        /// should become PV or PQ
+        /// </summary>
         internal static void UpdatePVBusStatus(MC YMatrix, NRResult nrRes)
         {
             foreach (var b in nrRes.NRBuses.AllPVBuses)
@@ -287,6 +299,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             UpdateBusAV(nrRes);
         }
 
+        /// <summary>
+        /// Save the calculated A and V of each bus
+        /// </summary>
         internal static void UpdateBusAV(NRResult nrRes)
         {
             var acnt = nrRes.NRBuses.J1Size.Row;
@@ -326,6 +341,10 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
         }
 
+        /// <summary>
+        /// Once the LF solution is available, then calculate
+        /// the power flow for each line.
+        /// </summary>
         internal static LFResult CalcResult(LFNetwork network, BU buses, bool isSolution)
         {
             // Calculate power flow in lines

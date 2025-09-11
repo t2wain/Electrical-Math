@@ -2,79 +2,87 @@
 using EEMathLib.ShortCircuit.ZMX;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
 namespace EEMathLib.ShortCircuit
 {
     public class SCExample
     {
+
+        #region Z Matrix
+
+        /// <summary>
+        /// Build Z matrix based on a given test data
+        /// </summary>
         public bool BuildZ1()
         {
-            var znwa = BuildZ1a();
-            var znwb = BuildZ1b();
-            var lstBus = znwa.Buses.Keys
-                .Aggregate(new List<(IZBus BusA, IZBus BusB)>(), (acc, bid) => 
-                {
-                    acc.Add((znwa.Buses[bid], znwb.Buses[bid]));
-                    return acc;
-                });
             var res = true;
-            foreach (var i in lstBus)
-            {
-                var za = znwa.Z[i.BusA.BusIndex, i.BusA.BusIndex];
-                var zb = znwb.Z[i.BusB.BusIndex, i.BusB.BusIndex];
-                res &= (za - zb).Magnitude < 0.0001;
-            }
+            var znwa = BuildZ1MethodA();
+
+            var zref = znwa.RefZNetwork;
+            zref.Buses = znwa.Buses;
+
+            var v = znwa.Validate(zref);
+            res &= v;
+
+            var znwb = BuildZ1MethodB();
+
+            // both Z matrices should equal
+            // although elements are added
+            // in different order
+            v = znwb.Validate(zref);
+            res &= v;
+
             return res;
         }
 
-        public ZNetwork BuildZ1a()
+        /// <summary>
+        /// Build Z matrix by adding individual element
+        /// in a specific sequence so it can be checked
+        /// against the reference Z matrix data
+        /// </summary>
+        public ZNetwork BuildZ1MethodA() => new ZNetwork1().BuildZTest();
+
+        /// <summary>
+        /// Build Z matrix by iterate through network graph
+        /// </summary>
+        public ZNetwork BuildZ1MethodB() => new ZNetwork1().BuildZMatrix();
+
+        public bool BuildZ2()
         {
-            var znw = new ZNetwork1();
-            var N = znw.Buses.Count;
-            znw.Z = MC.Build.Dense(N, N);
-
-            var dEl = znw.Elements;
-
-            var el1 = dEl["1"];
-            if (el1.ValidateAddElementRefToNewBus())
-                znw.AddElementRefToNewBus(el1);
-
-            var el2 = dEl["2"];
-            if (el2.ValidateAddElementRefToNewBus())
-                znw.AddElementRefToNewBus(el2);
-
-            var el3 = dEl["3"];
-            if (el3.ValidateAddElementExistToExistBus())
-                znw.AddElementExistToExistBus(el3);
-
-            var el4 = dEl["4"];
-            if (el4.ValidateAddElementNewToExistBus())
-                znw.AddElementNewToExistBus(el4);
-
-            var el5 = dEl["5"];
-            if (el5.ValidateAddElementNewToExistBus())
-                znw.AddElementNewToExistBus(el5);
-
-            var el6 = dEl["6"];
-            if (el6.ValidateAddElementExistToExistBus())
-                znw.AddElementExistToExistBus(el6);
-
-            var el7 = dEl["7"];
-            if (el7.ValidateAddElementExistToExistBus())
-                znw.AddElementExistToExistBus(el7);
-
-            return znw;
-
+            var znw = new ZNetwork2().BuildZMatrix();
+            var zref = znw.RefZNetwork;
+            var res = znw.Validate(zref);
+            return res;
         }
 
-        public ZNetwork BuildZ1b()
+        #endregion
+
+        public void Calc3PhaseFault(ZNetwork znw)
         {
-            var znw = new ZNetwork1();
-            var N = znw.Buses.Count;
-            znw.Z = MC.Build.Dense(N, N);
-            znw.BuildZMatrix();
-            return znw;
+            var res = SCAlgo.Calc3PhaseFaultCurrentAllBus(znw);
+        }
+
+        public void Calc3PhaseFaultBusesVoltage(ZNetwork znw, string busFaultId)
+        {
+            var res1 = SCAlgo.Calc3PhaseFaultBusesVoltage(znw, busFaultId);
+            var res2 = SCAlgo.Calc3PhaseFaultBusesVoltageV2(znw, busFaultId);
+            var dV = znw.Buses.Values.Aggregate(new Dictionary<string, Complex>(), (acc, bus) => 
+            {
+                acc.Add(bus.ID, res2[bus.BusIndex, 0]);
+                return acc;
+            });
+        }
+
+        public void Calc3PhaseFaultCurrentFlowFromAllBus(ZNetwork znw, string busFaultId)
+        {
+            var mxI = SCAlgo.Calc3PhaseFaultCurrentBranchFlow(znw, busFaultId);
+            var dI = znw.Buses.Values.Aggregate(new Dictionary<string, Complex>(), (acc, bus) =>
+            {
+                acc.Add(bus.ID, mxI[bus.BusIndex, 0]);
+                return acc;
+            });
         }
 
     }

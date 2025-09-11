@@ -1,5 +1,7 @@
 ﻿using EEMathLib.LoadFlow.Data;
 using EEMathLib.MatrixMath;
+using EEMathLib.ShortCircuit.Data;
+using EEMathLib.ShortCircuit.ZMX;
 
 namespace TestUnit
 {
@@ -54,6 +56,28 @@ namespace TestUnit
                     nw.YMatrix = MX.ParseMatrix(_data2y.YResult);
                 }
                 return _data2y;
+            }
+        }
+
+        ZNetwork _z1 = null!;
+        public ZNetwork ZNetwork1
+        {
+            get
+            {
+                if (_z1 == null)
+                    _z1 = new ZNetwork1().BuildZMatrix();
+                return _z1;
+            }
+        }
+
+        ZNetwork _z2 = null!;
+        public ZNetwork ZNetwork2
+        {
+            get
+            {
+                if (_z2 == null)
+                    _z2 = new ZNetwork2().BuildZMatrix();
+                return _z2;
             }
         }
 

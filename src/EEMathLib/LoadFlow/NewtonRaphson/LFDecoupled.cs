@@ -15,12 +15,19 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     {
         public LFDecoupled() : base(new Jacobian()) { }
 
+        
+        /// <summary>
+        /// Calculate on J1 and J4 Jacobian matrix
+        /// </summary>
         override internal void CalcJMatrix(MC YMatrix, NRResult nrRes)
         {
             nrRes.J1Matrix = JCM.CreateJ1(YMatrix, nrRes.NRBuses);
             nrRes.J4Matrix = JCM.CreateJ4(YMatrix, nrRes.NRBuses);
         }
 
+        /// <summary>
+        /// Calculate AV delta using on J1 and J4 Jacobian matrix
+        /// </summary>
         override internal void CalcAVDelta(NRResult nrRes)
         {
             var j1Size = nrRes.NRBuses.J1Size;

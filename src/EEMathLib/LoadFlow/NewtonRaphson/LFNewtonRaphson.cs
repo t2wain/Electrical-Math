@@ -12,11 +12,17 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         public LFNewtonRaphson() : this(new Jacobian()) { }
         public LFNewtonRaphson(JacobianBase jcm) : base(jcm) { }
 
+        /// <summary>
+        /// Create full Jacobian matrix J1, J2, J3, and J4
+        /// </summary>
         override internal void CalcJMatrix(MC YMatrix, NRResult nrRes)
         {
             nrRes.JMatrix = JCM.CreateJMatrix(YMatrix, nrRes.NRBuses);
         }
 
+        /// <summary>
+        /// Calculate AV delta using full Jacobian matrix
+        /// </summary>
         override internal void CalcAVDelta(NRResult nrRes)
         {
             nrRes.AVDelta = nrRes.JMatrix.Solve(nrRes.PQDelta); // delta A and V

@@ -33,7 +33,8 @@ namespace EEMathLib.ShortCircuit.Data
         IZBus FromBus { get; }
         IZBus ToBus { get; }
         Complex Z { get; }
-        bool IsAddedToZMatrix { get; set; }
+        int Sequence { get; set; }
+        int AddCase { get; set; }
     }
 
     public class EZElement : IEZElement
@@ -43,7 +44,9 @@ namespace EEMathLib.ShortCircuit.Data
         public IZBus FromBus { get; set; }
         public IZBus ToBus { get; set; }
         public Complex Z { get; set; }
-        public bool IsAddedToZMatrix { get; set; }
+        public int Sequence { get; set; } = -1;
+        public int AddCase { get; set; }
+
     }
 
     public class Branch

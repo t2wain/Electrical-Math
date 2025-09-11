@@ -43,6 +43,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return nrRes;
         }
 
+        /// <summary>
+        /// Calculate only J1 and J4 once to speed up the solution
+        /// </summary>
         override internal void CalcJMatrix(MC YMatrix, NRResult nrRes)
         {
             // re-use J1 and J4 matrices
@@ -58,6 +61,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
         }
 
+        /// <summary>
+        /// Calculate AV delta using on J1 and J4 Jacobian matrix
+        /// </summary>
         override internal void CalcAVDelta(NRResult nrRes)
         {
             var j1Size = nrRes.NRBuses.J1Size;

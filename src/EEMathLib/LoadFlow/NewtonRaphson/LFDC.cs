@@ -20,6 +20,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             return base.Solve(network, threshold, 1);
         }
 
+        /// <summary>
+        /// Calculate J1 Jacobian matrix only once and cache the data
+        /// </summary>
         override internal void CalcJMatrix(MC YMatrix, NRResult nrRes)
         {
             // re-use J1
@@ -30,6 +33,9 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             }
         }
 
+        /// <summary>
+        /// Only calculate A delta and assumming V is approximately 1.0pu
+        /// </summary>
         override internal void CalcAVDelta(NRResult nrRes)
         {
             var j1Size = nrRes.NRBuses.J1Size;
