@@ -26,7 +26,7 @@ namespace TestUnit
         }
 
         [Fact]
-        public void Calc_3Phase_Fault_Buses_Voltage() 
+        public void Calc_3Phase_Fault_Buses_Voltage()
         {
             new SCExample().Calc3PhaseFaultBusesVoltage(_ctx.ZNetwork1, "1");
         }
@@ -34,7 +34,13 @@ namespace TestUnit
         [Fact]
         public void Calc_3Phase_Fault_Current_Flow_From_All_Bus()
         {
-            new SCExample().Calc3PhaseFaultCurrentFlowFromAllBus(_ctx.ZNetwork1, "1");
+            new SCExample().Calc3PhaseFaultBusFlowFromAllBus(_ctx.ZNetwork1, "1");
+        }
+
+        [Fact]
+        public void Calc_3Phase_Fault_Element_Flow () 
+        {
+            new SCExample().Calc3PhaseFaultElementFlow(_ctx.ZNetwork1, "1");
         }
     }
 }

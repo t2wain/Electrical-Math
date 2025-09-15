@@ -34,66 +34,6 @@ namespace EEMathLib.ShortCircuit.Data
             RefZNetwork = new ZNetworkRef();
         }
 
-        /// <summary>
-        /// Build Z matrix by adding individual element
-        /// in a specific sequence so it can be checked
-        /// against the reference Z matrix data
-        /// </summary>
-        internal ZNetwork1 BuildZTest()
-        {
-            var N = Buses.Count;
-            Z = MC.Build.Dense(N, N);
-
-            var dEl = Elements;
-
-            #region Add elements
-
-            var znw = this;
-
-            // build up Z matrix by adding elements
-            // in a particular order to get a result
-            // that can be checked against reference
-            // Z matrix data
-            var el1 = dEl["1"];
-            el1.Sequence = 0;
-            if (el1.ValidateAddElementRefToNewBus())
-                znw.AddElementRefToNewBus(el1);
-
-            var el2 = dEl["2"];
-            el2.Sequence = 1;
-            if (el2.ValidateAddElementRefToNewBus())
-                znw.AddElementRefToNewBus(el2);
-
-            var el3 = dEl["3"];
-            el3.Sequence = 2;
-            if (el3.ValidateAddElementExistToExistBus())
-                znw.AddElementExistToExistBus(el3);
-
-            var el4 = dEl["4"];
-            el4.Sequence = 3;
-            if (el4.ValidateAddElementNewToExistBus())
-                znw.AddElementNewToExistBus(el4);
-
-            var el5 = dEl["5"];
-            el5.Sequence = 4;
-            if (el5.ValidateAddElementNewToExistBus())
-                znw.AddElementNewToExistBus(el5);
-
-            var el6 = dEl["6"];
-            el6.Sequence = 5;
-            if (el6.ValidateAddElementExistToExistBus())
-                znw.AddElementExistToExistBus(el6);
-
-            var el7 = dEl["7"];
-            el7.Sequence = 6;
-            if (el7.ValidateAddElementExistToExistBus())
-                znw.AddElementExistToExistBus(el7);
-
-            #endregion
-
-            return this;
-        }
-
         class ZNetworkRef : ZNetwork
         {
             public ZNetworkRef()

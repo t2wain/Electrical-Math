@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
 namespace EEMathLib.ShortCircuit.ZMX
@@ -14,9 +13,13 @@ namespace EEMathLib.ShortCircuit.ZMX
         #region Initialize
 
         /// <summary>
-        /// Create elements from a given network 
-        /// to build impedance matrix
+        /// Prepare the Z impedance data structure contains all buses and
+        /// all impedance elements based on a given network.
         /// </summary>
+        /// <param name="nw">Network data</param>
+        /// <param name="ztype">Impedance based on fault duration  
+        /// either Sub-transient, Transient, or Steady-state</param>
+        /// <returns>Data structure to build-up Z impdance matrix</returns>
         public static ZNetwork BuildZNetwork(this IENetwork nw, ZTypeEnum ztype)
         {
 
@@ -106,6 +109,13 @@ namespace EEMathLib.ShortCircuit.ZMX
 
         #region Z Matrix
 
+        /// <summary>
+        /// Calculate a new Z matrix and save it to Z property.
+        /// Once completed, each bus has a new bus index which
+        /// are indexes to access the entries of the Z matrix.
+        /// </summary>
+        /// <param name="znw">ZNetwork data structure</param>
+        /// <returns>The same ZNetwork with a new Z matrix stored in the Z property</returns>
         public static ZNetwork BuildZMatrix(this ZNetwork znw)
         {
             var N = znw.Buses.Count;
@@ -119,6 +129,8 @@ namespace EEMathLib.ShortCircuit.ZMX
             var elSeq = -1;
             while (qbus.Count > 0)
             {
+                // get the next bus
+                // to process the Z elements
                 var bid = qbus.Dequeue();
                 var branches = g[bid]
                     .Where(i => i.Element.Sequence < 0)
@@ -126,32 +138,50 @@ namespace EEMathLib.ShortCircuit.ZMX
                 foreach (var br in branches)
                 {
                     if (br.Element.Sequence >= 0)
-                        continue;
+                        continue; // the element was added earlier
 
                     if (br.ToBus is IZBus bus && !bus.Visited)
                     {
+                        // track the new bus encounter
+                        // to come back later and process
+                        // it impedance element.
                         bus.Visited = true;
                         qbus.Enqueue(bus.ID);
                     }
 
-                    var el = br.Element;
-                    if (el.ValidateAddElementRefToNewBus())
-                        znw.AddElementRefToNewBus(el);
-                    else if (el.ValidateAddElementRefToExistBus())
-                        znw.AddElementRefToExistBus(el);
-                    else if (el.ValidateAddElementNewToExistBus())
-                        znw.AddElementNewToExistBus(el);
-                    else if (el.ValidateAddElementExistToExistBus())
-                        znw.AddElementExistToExistBus(el);
-                    else throw new Exception();
-
-                    el.Sequence = ++elSeq;
+                    // add the element to the Z matrix
+                    znw.AddElement(br.Element);
+                    br.Element.Sequence = ++elSeq;
                 }
             }
 
             return znw;
         }
 
+        /// <summary>
+        /// Add the next impedance element to the Z matrix
+        /// </summary>
+        /// <param name="znw">Z matrix data structure</param>
+        /// <param name="element">Impedance element</param>
+        /// <returns>The same Z matrix data structure</returns>
+        /// <exception cref="Exception">Unable to add the impedance element</exception>
+        public static ZNetwork AddElement(this ZNetwork znw, IEZElement element)
+        {
+            if (element.ValidateAddElementRefToNewBus())
+                znw.AddElementRefToNewBus(element);
+            else if (element.ValidateAddElementRefToExistBus())
+                znw.AddElementRefToExistBus(element);
+            else if (element.ValidateAddElementNewToExistBus())
+                znw.AddElementNewToExistBus(element);
+            else if (element.ValidateAddElementExistToExistBus())
+                znw.AddElementExistToExistBus(element);
+            else throw new Exception();
+            return znw;
+        }
+
+        /// <summary>
+        /// Case 1 : Add the next impedance element to the Z matrix
+        /// </summary>
         internal static ZNetwork AddElementRefToNewBus(this ZNetwork znw, IEZElement element)
         {
             var bus = element.ToBus;
@@ -163,6 +193,9 @@ namespace EEMathLib.ShortCircuit.ZMX
             return znw;
         }
 
+        /// <summary>
+        /// Case 2 : Add the next impedance element to the Z matrix
+        /// </summary>
         internal static ZNetwork AddElementNewToExistBus(this ZNetwork znw, IEZElement element)
         {
             var fb = element.FromBus;
@@ -186,6 +219,9 @@ namespace EEMathLib.ShortCircuit.ZMX
             return znw;
         }
 
+        /// <summary>
+        /// Case 3 : Add the next impedance element to the Z matrix
+        /// </summary>
         internal static ZNetwork AddElementRefToExistBus(this ZNetwork znw, IEZElement element)
         {
             var q = element.ToBus.BusIndex;
@@ -206,6 +242,9 @@ namespace EEMathLib.ShortCircuit.ZMX
             return znw;
         }
 
+        /// <summary>
+        /// Case 4 : Add the next impedance element to the Z matrix
+        /// </summary>
         internal static ZNetwork AddElementExistToExistBus(this ZNetwork znw, IEZElement element)
         {
             var p = element.FromBus.BusIndex;
@@ -228,9 +267,15 @@ namespace EEMathLib.ShortCircuit.ZMX
         }
 
 
+        /// <summary>
+        /// Validate adding impedance element as Case 1
+        /// </summary>
         internal static bool ValidateAddElementRefToNewBus(this IEZElement element) =>
             element.FromBus == null && element.ToBus.BusIndex < 0;
 
+        /// <summary>
+        /// Validate adding impedance element as Case 2
+        /// </summary>
         internal static bool ValidateAddElementNewToExistBus(this IEZElement element)
         {
             var fbIdx = element.FromBus.BusIndex;
@@ -239,13 +284,25 @@ namespace EEMathLib.ShortCircuit.ZMX
                 || (fbIdx < 0 && tbIdx >= 0);
         }
 
+        /// <summary>
+        /// Validate adding impedance element as Case 3
+        /// </summary>
         internal static bool ValidateAddElementRefToExistBus(this IEZElement element) =>
             element.FromBus == null && element.ToBus.BusIndex >= 0;
 
+        /// <summary>
+        /// Validate adding impedance element as Case 4
+        /// </summary>
         internal static bool ValidateAddElementExistToExistBus(this IEZElement element) =>
             element.FromBus.BusIndex >= 0 && element.ToBus.BusIndex >= 0;
 
-        internal static bool Validate(this ZNetwork znw, ZNetwork refData)
+        /// <summary>
+        /// Validate that is Z matrix is equal the reference Z matrix
+        /// </summary>
+        /// <param name="znw">This Z matrix</param>
+        /// <param name="refData">Reference Z matrix</param>
+        /// <returns>True if both Z matrices are equal</returns>
+        internal static bool EQ(this ZNetwork znw, ZNetwork refData)
         {
             var res = true;
             var lstBusId = znw.Buses.Keys;

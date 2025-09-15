@@ -23,7 +23,7 @@ namespace EEMathLib.ShortCircuit
             var zref = znwa.RefZNetwork;
             zref.Buses = znwa.Buses;
 
-            var v = znwa.Validate(zref);
+            var v = znwa.EQ(zref);
             res &= v;
 
             var znwb = BuildZ1MethodB();
@@ -31,7 +31,7 @@ namespace EEMathLib.ShortCircuit
             // both Z matrices should equal
             // although elements are added
             // in different order
-            v = znwb.Validate(zref);
+            v = znwb.EQ(zref);
             res &= v;
 
             return res;
@@ -42,7 +42,22 @@ namespace EEMathLib.ShortCircuit
         /// in a specific sequence so it can be checked
         /// against the reference Z matrix data
         /// </summary>
-        public ZNetwork BuildZ1MethodA() => new ZNetwork1().BuildZTest();
+        public ZNetwork BuildZ1MethodA()
+        {
+            var znw = new ZNetwork1();
+
+            var N = znw.Buses.Count;
+            znw.Z = MC.Build.Dense(N, N);
+            var dEl = znw.Elements;
+
+            return znw.AddElement(dEl["1"])
+                .AddElement(dEl["2"])
+                .AddElement(dEl["3"])
+                .AddElement(dEl["4"])
+                .AddElement(dEl["5"])
+                .AddElement(dEl["6"])
+                .AddElement(dEl["7"]);
+        }
 
         /// <summary>
         /// Build Z matrix by iterate through network graph
@@ -53,37 +68,48 @@ namespace EEMathLib.ShortCircuit
         {
             var znw = new ZNetwork2().BuildZMatrix();
             var zref = znw.RefZNetwork;
-            var res = znw.Validate(zref);
+            var res = znw.EQ(zref);
             return res;
         }
 
         #endregion
 
+        #region 3-Phase Symmetrical Fault Calculation
+
         public void Calc3PhaseFault(ZNetwork znw)
         {
-            var res = SCAlgo.Calc3PhaseFaultCurrentAllBus(znw);
+            // fault current at each bus
+            IDictionary<string, Complex> res = SCSymAlgo.CalcCurrentAllBus(znw);
         }
 
         public void Calc3PhaseFaultBusesVoltage(ZNetwork znw, string busFaultId)
         {
-            var res1 = SCAlgo.Calc3PhaseFaultBusesVoltage(znw, busFaultId);
-            var res2 = SCAlgo.Calc3PhaseFaultBusesVoltageV2(znw, busFaultId);
+            var res = SCSymAlgo.CalcBusesVoltage(znw, busFaultId);
             var dV = znw.Buses.Values.Aggregate(new Dictionary<string, Complex>(), (acc, bus) => 
             {
-                acc.Add(bus.ID, res2[bus.BusIndex, 0]);
+                acc.Add(bus.ID, res[bus.BusIndex, 0]);
                 return acc;
             });
         }
 
-        public void Calc3PhaseFaultCurrentFlowFromAllBus(ZNetwork znw, string busFaultId)
+        public void Calc3PhaseFaultBusFlowFromAllBus(ZNetwork znw, string busFaultId)
         {
-            var mxI = SCAlgo.Calc3PhaseFaultCurrentBranchFlow(znw, busFaultId);
+            var mxI = SCSymAlgo.CalcBusFlow(znw, busFaultId);
             var dI = znw.Buses.Values.Aggregate(new Dictionary<string, Complex>(), (acc, bus) =>
             {
                 acc.Add(bus.ID, mxI[bus.BusIndex, 0]);
                 return acc;
             });
         }
+
+        public void Calc3PhaseFaultElementFlow(ZNetwork znw, string busFaultId)
+        {
+            var mxV = SCSymAlgo.CalcBusesVoltage(znw, busFaultId);
+            var dI = SCSymAlgo.CalcElementFlow(znw, mxV);
+        }
+
+
+        #endregion
 
     }
 }
