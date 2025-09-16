@@ -15,7 +15,7 @@ namespace EEMathLib.ShortCircuit
         /// </summary>
         /// <param name="znw">Z Impedance matrix</param>
         /// <returns>A dictionary of bus ID key and its fault curent</returns>
-        public static IDictionary<string, Complex> CalcCurrentAllBus(ZNetwork znw)
+        public static IDictionary<string, Complex> CalcCurrentAllBus(this ZNetwork znw)
         {
             var res = znw.Buses.Values.Aggregate(new Dictionary<string, Complex>(), (acc, bus) =>
             {
@@ -55,7 +55,7 @@ namespace EEMathLib.ShortCircuit
         /// <returns>Bus voltages of all buses during a fault at a faulted bus.
         /// The result is a column matrix of dimension Nx1. The matrix index 
         /// is the same as the bus index of ZNetwork.</returns>
-        public static MC CalcBusesVoltage(ZNetwork znw, string faultedBusId, Complex faultCurrent) 
+        public static MC CalcBusesVoltage(this ZNetwork znw, string faultedBusId, Complex faultCurrent) 
         {
             var bfault = znw.Buses[faultedBusId];
             // pre-fault voltage at faulted bus
@@ -86,7 +86,7 @@ namespace EEMathLib.ShortCircuit
         /// <returns>Bus voltages of all buses during a fault at a faulted bus.
         /// The result is a column matrix of dimension Nx1. The matrix index 
         /// is the same as the bus index of ZNetwork.</returns>
-        public static MC CalcBusesVoltage(ZNetwork znw, string faultedBusId)
+        public static MC CalcBusesVoltage(this ZNetwork znw, string faultedBusId)
         {
             var bn = znw.Buses[faultedBusId];
 
@@ -121,7 +121,7 @@ namespace EEMathLib.ShortCircuit
         /// <returns>Fault currents from all buses flow to a faulted bus.
         /// The result is a column matrix of dimension Nx1. The matrix index 
         /// is the same as the bus index of ZNetwork.</returns>
-        public static MC CalcBusFlow(ZNetwork znw, string faultedBusId)
+        public static MC CalcBusFlow(this ZNetwork znw, string faultedBusId)
         {
             // voltage at each bus during fault
             var ifault = znw.CalcCurrent(faultedBusId);

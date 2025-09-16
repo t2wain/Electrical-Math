@@ -42,5 +42,19 @@ namespace TestUnit
         {
             new SCExample().Calc3PhaseFaultElementFlow(_ctx.ZNetwork1, "1");
         }
+
+        [Fact]
+        public void Calc_Sym_Components()
+        {
+            var v = new SCExample().CalcSymVoltage();
+            Assert.True(v);
+        }
+
+        [Fact]
+        public void Calc_Asym_Power()
+        {
+            var v = new SCExample().CalcAsymPower();
+            Assert.True(v);
+        }
     }
 }

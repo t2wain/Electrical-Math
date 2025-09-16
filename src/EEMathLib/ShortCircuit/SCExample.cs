@@ -1,4 +1,5 @@
-﻿using EEMathLib.ShortCircuit.Data;
+﻿using EEMathLib.LoadFlow.NewtonRaphson;
+using EEMathLib.ShortCircuit.Data;
 using EEMathLib.ShortCircuit.ZMX;
 using System.Collections.Generic;
 using System.Linq;
@@ -79,12 +80,12 @@ namespace EEMathLib.ShortCircuit
         public void Calc3PhaseFault(ZNetwork znw)
         {
             // fault current at each bus
-            IDictionary<string, Complex> res = SCSymAlgo.CalcCurrentAllBus(znw);
+            IDictionary<string, Complex> res = znw.CalcCurrentAllBus();
         }
 
         public void Calc3PhaseFaultBusesVoltage(ZNetwork znw, string busFaultId)
         {
-            var res = SCSymAlgo.CalcBusesVoltage(znw, busFaultId);
+            var res = znw.CalcBusesVoltage(busFaultId);
             var dV = znw.Buses.Values.Aggregate(new Dictionary<string, Complex>(), (acc, bus) => 
             {
                 acc.Add(bus.ID, res[bus.BusIndex, 0]);
@@ -94,7 +95,7 @@ namespace EEMathLib.ShortCircuit
 
         public void Calc3PhaseFaultBusFlowFromAllBus(ZNetwork znw, string busFaultId)
         {
-            var mxI = SCSymAlgo.CalcBusFlow(znw, busFaultId);
+            var mxI = znw.CalcBusFlow(busFaultId);
             var dI = znw.Buses.Values.Aggregate(new Dictionary<string, Complex>(), (acc, bus) =>
             {
                 acc.Add(bus.ID, mxI[bus.BusIndex, 0]);
@@ -104,10 +105,62 @@ namespace EEMathLib.ShortCircuit
 
         public void Calc3PhaseFaultElementFlow(ZNetwork znw, string busFaultId)
         {
-            var mxV = SCSymAlgo.CalcBusesVoltage(znw, busFaultId);
-            var dI = SCSymAlgo.CalcElementFlow(znw, mxV);
+            var mxV = znw.CalcBusesVoltage(busFaultId);
+            var dI = znw.CalcElementFlow(mxV);
         }
 
+
+        #endregion
+
+        #region Symmetrical Components
+
+        public bool CalcSymVoltage()
+        {
+            var asymV = new PhaseValue
+            {
+                P1 = new Phasor(7.3, 12.5).ToComplex(),
+                P2 = new Phasor(0.4, -100).ToComplex(),
+                P3 = new Phasor(4.4, 154).ToComplex(),
+            };
+            var symV = SCSComp.CalcSymComp(asymV);
+
+            var res = true;
+
+            var va0 = Phasor.Convert(symV.A0);
+            var v = Checker.EQ(va0, new Phasor(1.47, 45.1), 0.1, 0.1);
+            res &= v;
+
+            var va1 = Phasor.Convert(symV.A1);
+            v = Checker.EQ(va1, new Phasor(3.97, 20.5), 0.1, 0.1);
+            res &= v;
+
+            var va2 = Phasor.Convert(symV.A2);
+            v = Checker.EQ(va2, new Phasor(2.52, -19.7), 0.1, 0.1);
+            res &= v;
+
+            return res;
+        }
+
+        public bool CalcAsymPower()
+        {
+            var asymV = new PhaseValue
+            {
+                P1 = 0,
+                P2 = 50,
+                P3 = -50
+            };
+
+            var asymI = new PhaseValue
+            {
+                P1 = -5,
+                P2 = new Complex(0, 5),
+                P3 = -5,
+            };
+
+            var s3 = SCSComp.CalcAsymPower(asymV, asymI);
+            var res = Checker.EQ(s3, new Phasor(353.5534, -45), 0.01, 0.1);
+            return res;
+        }
 
         #endregion
 

@@ -4,7 +4,6 @@ using EEMathLib.MatrixMath;
 using EEMathLib.ShortCircuit.ZMX;
 using System.Collections.Generic;
 using System.Numerics;
-using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
 namespace EEMathLib.ShortCircuit.Data
 {
