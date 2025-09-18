@@ -7,9 +7,12 @@ namespace EEMathLib.ShortCircuit.Data
     {
         Subtransient,
         Transient,
-        SteadyState
+        Synchronous
     }
 
+    /// <summary>
+    /// Bus data and result for building Z matrix.
+    /// </summary>
     public interface IZBus
     {
         string ID { get; }
@@ -18,14 +21,33 @@ namespace EEMathLib.ShortCircuit.Data
         bool Visited { get; set; }
     }
 
+    /// <summary>
+    /// Bus data and result for building Z matrix.
+    /// </summary>
     public class ZBus : IZBus
     {
         public string ID { get; set; }
         public IEBus Data { get; set; }
+
+        /// <summary>
+        /// As new node is added to the Z matrix,
+        /// an incremental index is assigned to the
+        /// bus to correspond to the entry of the
+        /// Z matrix
+        /// </summary>
         public int BusIndex { get; set; } = -1;
+
+        /// <summary>
+        /// Related to walking-the-graph
+        /// algorithm when building the 
+        /// Z matrix.
+        /// </summary>
         public bool Visited { get; set; }
     }
 
+    /// <summary>
+    /// Impedance data for building Z matrix
+    /// </summary>
     public interface IEZElement
     {
         string ID { get; }
@@ -37,6 +59,9 @@ namespace EEMathLib.ShortCircuit.Data
         int AddCase { get; set; }
     }
 
+    /// <summary>
+    /// Impedance data for building Z matrix
+    /// </summary>
     public class EZElement : IEZElement
     {
         public string ID { get; set; }  
@@ -44,20 +69,20 @@ namespace EEMathLib.ShortCircuit.Data
         public IZBus FromBus { get; set; }
         public IZBus ToBus { get; set; }
         public Complex Z { get; set; }
+
+        /// <summary>
+        /// The sequence index that the
+        /// element is added to the Z matrix
+        /// </summary>
         public int Sequence { get; set; } = -1;
+
+        /// <summary>
+        /// Identify which algorithm used
+        /// to add the element to the Z
+        /// matrix
+        /// </summary>
         public int AddCase { get; set; }
 
-    }
-
-    public class Branch
-    {
-        public Branch(IEZElement el, IZBus toBus)
-        {
-            this.Element = el;
-            this.ToBus = toBus;
-        }
-        public IEZElement Element { get; set; }
-        public IZBus ToBus { get; set; }
     }
 
 }

@@ -56,5 +56,13 @@ namespace TestUnit
             var v = new SCExample().CalcAsymPower();
             Assert.True(v);
         }
+
+        [Fact]
+        public void Calc_Z_Sequence_Matrices()
+        {
+            var v = new SCExample().CalcZSeqMatrices();
+            Assert.True(v);
+
+        }
     }
 }

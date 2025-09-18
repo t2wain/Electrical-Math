@@ -1,9 +1,22 @@
-﻿using MathNet.Numerics.LinearAlgebra;
+﻿using EEMathLib.ShortCircuit.Data;
+using MathNet.Numerics.LinearAlgebra;
 using System.Collections.Generic;
 using System.Numerics;
 
 namespace EEMathLib.DTO
 {
+    public enum WindingEnum
+    {
+        D,
+        Y,
+        Yn,
+        Dy,
+        Dyn,
+        Yd,
+        YNd,
+        YNyn
+    }
+
     public interface IEntity
     {
         string ID { get; set; }
@@ -15,13 +28,6 @@ namespace EEMathLib.DTO
     {
         public string ID { get; set; }
         public int EntityType { get; set;  }
-    }
-
-    public interface IEZComp
-    {
-        Complex Zero { get; }
-        Complex One { get; }
-        Complex Two { get; }
     }
 
     public interface IEBus : IEntity
@@ -56,7 +62,18 @@ namespace EEMathLib.DTO
     {
         IEBus FromBus { get; }
         IEBus ToBus { get; }
+        WindingEnum Winding { get; }
         double X { get; }
+    }
+
+    public interface IEZGen : IEntity
+    {
+        IEBus Bus { get; set; }
+        WindingEnum Winding { get; }
+        double Rs { get; }
+        double Xm { get; }
+        Complex Zn { get; }
+        double Xs { get; }
     }
 
     public interface IEGen : IEntity
@@ -70,6 +87,14 @@ namespace EEMathLib.DTO
         double Xpp { get; set; }
         double Xp { get; set; }
         double X {  get; set; }
+
+        WindingEnum Winding { get; }
+        double Rs { get; }
+        double Xm { get; }
+        Complex Zn { get; }
+        double Xs { get; }
+
+        IEZGen GetZGen(ZTypeEnum ztype);
     }
 
     public interface IELoad : IEntity

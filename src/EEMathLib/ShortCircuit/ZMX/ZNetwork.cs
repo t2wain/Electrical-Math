@@ -1,7 +1,5 @@
 ﻿using EEMathLib.ShortCircuit.Data;
 using System.Collections.Generic;
-using System.Numerics;
-using System;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
 namespace EEMathLib.ShortCircuit.ZMX
@@ -26,10 +24,10 @@ namespace EEMathLib.ShortCircuit.ZMX
         public IDictionary<string, IZBus> Buses { get; set; }
         
         /// <summary>
-        /// Elements associated with the building of the Z matrix
+        /// Elements associated with the building of the Z1 matrix
         /// </summary>
         public IDictionary<string, IEZElement> Elements { get; set; }
-        
+
         /// <summary>
         /// The last the bus index assigned to the new bus
         /// added to the Z matrix.
@@ -41,8 +39,6 @@ namespace EEMathLib.ShortCircuit.ZMX
         /// added to the Z matrix.
         /// </summary>
         internal int GetNextBusIndex() => ++LastBusIndex;
-
-        protected Complex C(double g, double b) => new Complex(g, b);
 
         internal ZNetwork RefZNetwork { get; set; }
     }

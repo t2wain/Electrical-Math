@@ -75,7 +75,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
             NRResult nrRes = new NRResult();
             while (i++ < maxIteration)
             {
-                // allow some data from reulst of previous iteration
+                // allow some data from result of previous iteration
                 // to be available in the next iteration
                 nrRes = InitResult(nrRes);
                 Iterate(nrRes, buses, Y, threshold);
@@ -270,7 +270,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         }
 
         /// <summary>
-        /// Not implmented. Calculation step for each iteration.
+        /// Not implemented. Calculation step for each iteration.
         /// Require sub-class to override the method as needed.
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
@@ -280,7 +280,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
         }
 
         /// <summary>
-        /// Not implmented. Calculation step for each iteration.
+        /// Not implemented. Calculation step for each iteration.
         /// Require sub-class to override the method as needed.
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>

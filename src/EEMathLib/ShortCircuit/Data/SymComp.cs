@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EEMathLib.MatrixMath;
+using System;
 using System.Numerics;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
@@ -54,10 +55,13 @@ namespace EEMathLib.ShortCircuit.Data
         public Complex P2 { get; set; }
         public Complex P3 { get; set; }
 
+        #region Utility methods
+
         /// <summary>
         /// Convert to a column matrix of dimension 3x1
         /// </summary>
-        public static MC ToMatrix(IPhaseValue phValue) => MC.Build.Dense(3, 1, new Complex[] { phValue.P1, phValue.P2, phValue.P3 });
+        public static MC ToMatrix(IPhaseValue phValue) => 
+            MX.BuildMX(3, 1, phValue.P1, phValue.P2, phValue.P3);
 
         /// <summary>
         /// Convert to a set of values of three phase system
@@ -77,14 +81,22 @@ namespace EEMathLib.ShortCircuit.Data
             else throw new Exception("Expect column matrix of 3x1");
         }
 
+        #endregion
+
+        #region ISymComp interface
 
         Complex ISymComp.A0 => P1;
         Complex ISymComp.A1 => P2;
         Complex ISymComp.A2 => P3;
 
+        #endregion
+
+        #region IAsymPhasor interface
 
         Complex IAsymPhasor.A => P1;
         Complex IAsymPhasor.B => P2;
         Complex IAsymPhasor.C => P3;
+
+        #endregion
     }
 }

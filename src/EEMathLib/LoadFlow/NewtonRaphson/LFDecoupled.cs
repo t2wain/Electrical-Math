@@ -9,7 +9,7 @@ namespace EEMathLib.LoadFlow.NewtonRaphson
     /// <summary>
     /// Decoupled load flow algorithm is based on the assumption that
     /// real-power is primary dependent on bus phase angle (Jacobian J1 P/A), and
-    /// reactive-ppower is primary dependent on bus voltage (Jacobian J4 Q/V).
+    /// reactive-power is primary dependent on bus voltage (Jacobian J4 Q/V).
     /// </summary>
     public class LFDecoupled : NewtonRaphsonBase
     {

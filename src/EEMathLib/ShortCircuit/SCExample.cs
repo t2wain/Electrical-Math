@@ -1,4 +1,4 @@
-﻿using EEMathLib.LoadFlow.NewtonRaphson;
+﻿using EEMathLib.MatrixMath;
 using EEMathLib.ShortCircuit.Data;
 using EEMathLib.ShortCircuit.ZMX;
 using System.Collections.Generic;
@@ -116,24 +116,30 @@ namespace EEMathLib.ShortCircuit
 
         public bool CalcSymVoltage()
         {
-            var asymV = new PhaseValue
+            // asymmetrical Va, Vb, Vc
+            IAsymPhasor asymV = new PhaseValue
             {
                 P1 = new Phasor(7.3, 12.5).ToComplex(),
                 P2 = new Phasor(0.4, -100).ToComplex(),
                 P3 = new Phasor(4.4, 154).ToComplex(),
             };
-            var symV = SCSComp.CalcSymComp(asymV);
+
+            // decompose asym to sym components
+            ISymComp symV = SCSComp.CalcSymComp(asymV);
 
             var res = true;
 
+            // zero-sequence Va
             var va0 = Phasor.Convert(symV.A0);
             var v = Checker.EQ(va0, new Phasor(1.47, 45.1), 0.1, 0.1);
             res &= v;
 
+            // positive-sequence Va
             var va1 = Phasor.Convert(symV.A1);
             v = Checker.EQ(va1, new Phasor(3.97, 20.5), 0.1, 0.1);
             res &= v;
 
+            // negative-sequence Va
             var va2 = Phasor.Convert(symV.A2);
             v = Checker.EQ(va2, new Phasor(2.52, -19.7), 0.1, 0.1);
             res &= v;
@@ -143,22 +149,67 @@ namespace EEMathLib.ShortCircuit
 
         public bool CalcAsymPower()
         {
-            var asymV = new PhaseValue
+            // asym voltages Va, Vb, Vc
+            IAsymPhasor asymV = new PhaseValue
             {
                 P1 = 0,
                 P2 = 50,
                 P3 = -50
             };
 
-            var asymI = new PhaseValue
+            // asym currents Ia, Ib, Ic
+            IAsymPhasor asymI = new PhaseValue
             {
                 P1 = -5,
                 P2 = new Complex(0, 5),
                 P3 = -5,
             };
 
+            // three-phase apparent power
             var s3 = SCSComp.CalcAsymPower(asymV, asymI);
             var res = Checker.EQ(s3, new Phasor(353.5534, -45), 0.01, 0.1);
+
+            return res;
+        }
+
+        public bool CalcZSeqMatrices()
+        {
+            var nw1 = new ZNetwork3Z1();
+
+            var nw2 = new ZNetwork3Z2();
+            nw2.Buses = nw1.Buses.Values
+                .Select(b => new ZBus { ID = b.ID, Data = b.Data })
+                .Cast<IZBus>()
+                .ToDictionary(b => b.ID);
+            nw2.Init();
+
+            var nw0 = new ZNetwork3Z0();
+            nw0.Buses = nw1.Buses.Values
+                .Select(b => new ZBus { ID = b.ID, Data = b.Data })
+                .Cast<IZBus>()
+                .ToDictionary(b => b.ID);
+            nw0.Init();
+
+            var res = true;
+
+            var znw1 = nw1.BuildZMatrix();
+            var b3 = znw1.Buses["3"];
+            var z3 = znw1.Z[b3.BusIndex, b3.BusIndex];
+            var v = Checker.EQ(z3, MX.C(0, 0.2618), 0.001, 0.001);
+            res &= v;
+
+            var znw2 = nw2.BuildZMatrix();
+            b3 = znw2.Buses["3"];
+            z3 = znw2.Z[b3.BusIndex, b3.BusIndex];
+            v = Checker.EQ(z3, MX.C(0, 0.2317), 0.001, 0.001);
+            res &= v;
+
+            var znw0 = nw0.BuildZMatrix();
+            b3 = znw0.Buses["3"];
+            z3 = znw0.Z[b3.BusIndex, b3.BusIndex];
+            v = Checker.EQ(z3, MX.C(0, 0.56), 0.01, 0.01);
+            res &= v;
+
             return res;
         }
 

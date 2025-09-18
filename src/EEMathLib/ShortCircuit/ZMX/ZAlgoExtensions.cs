@@ -10,7 +10,49 @@ namespace EEMathLib.ShortCircuit.ZMX
 {
     public static class ZAlgoExtensions
     {
-        #region Initialize
+        #region Graph network
+
+        /// <summary>
+        /// Represent the edge in the
+        /// graph network
+        /// </summary>
+        internal class Branch
+        {
+            public Branch(IEZElement el, IZBus toBus)
+            {
+                this.Element = el;
+                this.ToBus = toBus;
+            }
+            public IEZElement Element { get; set; }
+            public IZBus ToBus { get; set; }
+        }
+
+        /// <summary>
+        /// Build a network graph of impedance elements
+        /// to be used to select the element to be added to
+        /// the Z impedance in a certain order.
+        /// </summary>
+        internal static IDictionary<string, List<Branch>> BuildGraph(this ZNetwork znw)
+        {
+            var dBus = new Dictionary<string, List<Branch>>
+            {
+                { "ref", new List<Branch>() }
+            };
+            foreach (var bus in znw.Buses.Values)
+                dBus.Add(bus.ID, new List<Branch>());
+            foreach (var el in znw.Elements.Values)
+            {
+                if (el.FromBus == null)
+                    dBus["ref"].Add(new Branch(el, el.ToBus));
+                else dBus[el.FromBus.ID].Add(new Branch(el, el.ToBus));
+                dBus[el.ToBus.ID].Add(new Branch(el, el.FromBus));
+            }
+            return dBus;
+        }
+
+        #endregion
+
+        #region Build Impedance Elements
 
         /// <summary>
         /// Prepare the Z impedance data structure contains all buses and
@@ -19,90 +61,180 @@ namespace EEMathLib.ShortCircuit.ZMX
         /// <param name="nw">Network data</param>
         /// <param name="ztype">Impedance based on fault duration  
         /// either Sub-transient, Transient, or Steady-state</param>
-        /// <returns>Data structure to build-up Z impdance matrix</returns>
+        /// <returns>Data structure to build-up Z impedance matrix</returns>
         public static ZNetwork BuildZNetwork(this IENetwork nw, ZTypeEnum ztype)
         {
+            var znw = nw.InitZNetwork();
 
+            // line impedance elements
+            var lstE = znw.BuildZLine(nw.Lines);
+            znw.Elements.AddItems(lstE);
+
+            // transformer impedance elements
+            lstE = znw.BuildZXfmr(nw.Transformers);
+            znw.Elements.AddItems(lstE);
+
+            // generator impedance elements
+            lstE = znw.BuildZGen(nw.Generators, ztype);
+            znw.Elements.AddItems(lstE);
+
+            // load impedance elements
+            lstE = znw.BuildZLoad(nw.Loads);
+            znw.Elements.AddItems(lstE);
+
+            return znw;
+        }
+
+        public static ZNetwork BuildZ2Network(this IENetwork nw, ZTypeEnum ztype)
+        {
+            var znw = nw.InitZNetwork();
+
+            // line impedance elements
+            var lstE = znw.BuildZLine(nw.Lines);
+            znw.Elements.AddItems(lstE);
+
+            // transformer impedance elements
+            lstE = znw.BuildZXfmr(nw.Transformers);
+            znw.Elements.AddItems(lstE);
+
+            // generator impedance elements
+            lstE = znw.BuildZGen(nw.Generators, ztype);
+            znw.Elements.AddItems(lstE);
+
+            // load impedance elements
+            lstE = znw.BuildZLoad(nw.Loads);
+            znw.Elements.AddItems(lstE);
+
+            return znw;
+        }
+
+        public static ZNetwork BuildZ0Network(this IENetwork nw, ZTypeEnum ztype)
+        {
+            var znw = nw.InitZNetwork();
+
+            // line impedance elements
+            var lstE = znw.BuildZLine(nw.Lines);
+
+            // transformer impedance elements
+            lstE = znw.BuildZ0Xfmr(nw.Transformers);
+            znw.Elements.AddItems(lstE);
+
+            // generator impedance elements
+            lstE = znw.BuildZ0Gen(nw.Generators, ztype);
+            znw.Elements.AddItems(lstE);
+
+            return znw;
+        }
+
+        internal static IEnumerable<IEZElement> BuildZLine(this ZNetwork znw, IEnumerable<IELine> lines) =>
+            // line impedance elements
+            lines
+                .Select(l => new EZElement
+                {
+                    ID = l.ID,
+                    Data = l,
+                    FromBus = znw.Buses[l.FromBus.ID], // associate bus
+                    ToBus = znw.Buses[l.ToBus.ID], // associate bus
+                    Z = l.ZSeries // impedance value
+                });
+
+        internal static IEnumerable<IEZElement> BuildZ0Xfmr(this ZNetwork znw, IEnumerable<IETransformer> transformers)
+        {
+            var q = transformers
+                .Where(xf => xf.Winding == WindingEnum.YNyn)
+                .Select(xf => new EZElement
+                {
+                    ID = xf.ID,
+                    Data = xf,
+                    FromBus = znw.Buses[xf.FromBus.ID], // associate bus
+                    ToBus = znw.Buses[xf.ToBus.ID], // associate bus
+                    Z = xf.X // impedance value
+                });
+
+
+            var q2 = transformers
+                .Where(xf => xf.Winding == WindingEnum.YNd)
+                .Select(xf => new EZElement
+                 {
+                     ID = xf.ID,
+                     Data = xf,
+                     ToBus = znw.Buses[xf.FromBus.ID], // associate bus
+                     Z = xf.X // impedance value
+                 });
+
+            return q.Concat(q2);
+        }
+
+        internal static IEnumerable<IEZElement> BuildZXfmr(this ZNetwork znw, IEnumerable<IETransformer> transformers) =>
+            // transformer impedance elements
+            transformers
+                .Select(t => new EZElement
+                {
+                    ID = t.ID,
+                    Data = t,
+                    FromBus = znw.Buses[t.FromBus.ID], // associate bus
+                    ToBus = znw.Buses[t.ToBus.ID], // associate bus
+                    Z = new Complex(0, t.X) // impedance value
+                });
+
+        internal static IEnumerable<IEZElement> BuildZ0Gen(this ZNetwork znw, IEnumerable<IEGen> generators, ZTypeEnum ztype) =>
+            generators.Where(g => g.Winding == WindingEnum.Yn)
+                .Select(i => i.GetZGen(ztype))
+                .Select(g => new EZElement
+                {
+                    ID = g.ID,
+                    Data = g,
+                    ToBus = znw.Buses[g.Bus.ID], // associate bus
+                    Z = g.Z00() // impedance value
+                });
+
+        internal static IEnumerable<IEZElement> BuildZGen(this ZNetwork znw, IEnumerable<IEGen> generators, ZTypeEnum ztype) =>
+            generators
+                .Select(g => new EZElement
+                {
+                    ID = g.ID,
+                    Data = g,
+                    ToBus = znw.Buses[g.Bus.ID], // associate bus
+                    Z = new Complex(0,
+                        ztype == ZTypeEnum.Transient ?
+                            g.Xp :
+                            g.Xpp) // impedance value
+                });
+
+        internal static IEnumerable<IEZElement> BuildZLoad(this ZNetwork znw, IEnumerable<IELoad> loads) =>
+            loads
+                .Select(l => new EZElement
+                {
+                    ID = l.ID,
+                    Data = l,
+                    ToBus = znw.Buses[l.Bus.ID], // associate bus
+                    Z = new Complex(0, l.Xpp) // impedance value
+                });
+
+        static void AddItems(this IDictionary<string, IEZElement> dElements, IEnumerable<IEZElement> elements) =>
+            elements.Aggregate(dElements, (acc, l) =>
+            {
+                acc.Add(l.ID, l);
+                return acc;
+            });
+
+        static ZNetwork InitZNetwork(this IENetwork nw)
+        {
+            // bus to keep track of bus index
+            // that is to be assigned during
+            // building the Z matrix
             var dBus = nw.Buses
                 .Select(b => new ZBus { ID = b.ID, Data = b })
                 .Cast<IZBus>()
                 .ToDictionary(b => b.ID);
 
-            var lstEl = new List<EZElement>();
-
-            var lines = nw.Lines
-                .Select(l => new EZElement
-                {
-                    ID = l.ID,
-                    Data = l,
-                    FromBus = dBus[l.FromBus.ID],
-                    ToBus = dBus[l.ToBus.ID],
-                    Z = l.ZSeries
-                });
-            lstEl.AddRange(lines);
-
-            var xfs = nw.Transformers
-                .Select(t => new EZElement
-                {
-                    ID = t.ID,
-                    Data = t,
-                    FromBus = dBus[t.FromBus.ID],
-                    ToBus = dBus[t.ToBus.ID],
-                    Z = new Complex(0, t.X)
-                });
-            lstEl.AddRange(xfs);
-
-            if (nw.Generators.Count() > 0 && ztype != ZTypeEnum.SteadyState)
-            {
-                var gens = nw.Generators
-                    .Select(g => new EZElement
-                    {
-                        ID = g.ID,
-                        Data = g,
-                        ToBus = dBus[g.Bus.ID],
-                        Z = new Complex(0, ztype == ZTypeEnum.Transient ? g.Xp : g.Xpp)
-                    });
-                lstEl.AddRange(gens);
-            }
-
-            if (nw.Loads.Count() > 0 && ztype == ZTypeEnum.Subtransient) 
-            {
-                var loads = nw.Loads
-                    .Select(l => new EZElement
-                    {
-                        ID = l.ID,
-                        Data = l,
-                        ToBus = dBus[l.Bus.ID],
-                        Z = new Complex(0, l.Xpp)
-                    });
-                lstEl.AddRange(loads);
-            }
-
-            var znw = new ZNetwork
+            // Data structure consist of bus and impedance
+            // to build-up Z matrix
+            return new ZNetwork
             {
                 Buses = dBus,
-                Elements = lstEl.Cast<IEZElement>().ToDictionary(e => e.Data.ID),
+                Elements = new Dictionary<string, IEZElement>(),
             };
-
-            return znw;
-        }
-
-        internal static IDictionary<string, List<Branch>> BuildGraph(this ZNetwork znw)
-        {
-            var dBus = new Dictionary<string, List<Branch>> 
-            { 
-                { "ref", new List<Branch>() } 
-            };
-            foreach (var bus in znw.Buses.Values)
-                dBus.Add(bus.ID, new List<Branch>());
-            foreach(var el in znw.Elements.Values)
-            {
-                if (el.FromBus == null)
-                    dBus["ref"].Add(new Branch(el, el.ToBus));
-                else dBus[el.FromBus.ID].Add(new Branch(el, el.ToBus));
-                dBus[el.ToBus.ID].Add(new Branch(el, el.FromBus));
-            }
-            return dBus;
         }
 
         #endregion
@@ -158,6 +290,10 @@ namespace EEMathLib.ShortCircuit.ZMX
             return znw;
         }
 
+        #endregion
+
+        #region Add Element
+
         /// <summary>
         /// Add the next impedance element to the Z matrix
         /// </summary>
@@ -167,14 +303,14 @@ namespace EEMathLib.ShortCircuit.ZMX
         /// <exception cref="Exception">Unable to add the impedance element</exception>
         public static ZNetwork AddElement(this ZNetwork znw, IEZElement element)
         {
-            if (element.ValidateAddElementRefToNewBus())
-                znw.AddElementRefToNewBus(element);
-            else if (element.ValidateAddElementRefToExistBus())
-                znw.AddElementRefToExistBus(element);
-            else if (element.ValidateAddElementNewToExistBus())
-                znw.AddElementNewToExistBus(element);
-            else if (element.ValidateAddElementExistToExistBus())
-                znw.AddElementExistToExistBus(element);
+            if (element.ValidateAddElementRefBusToNewBus())
+                znw.AddElementRefBusToNewBus(element);
+            else if (element.ValidateAddElementRefBusToExistBus())
+                znw.AddElementRefBusToExistBus(element);
+            else if (element.ValidateAddElementNewBusToExistBus())
+                znw.AddElementNewBusToExistBus(element);
+            else if (element.ValidateAddElementExistBusToExistBus())
+                znw.AddElementExistBusToExistBus(element);
             else throw new Exception();
             return znw;
         }
@@ -182,9 +318,10 @@ namespace EEMathLib.ShortCircuit.ZMX
         /// <summary>
         /// Case 1 : Add the next impedance element to the Z matrix
         /// </summary>
-        internal static ZNetwork AddElementRefToNewBus(this ZNetwork znw, IEZElement element)
+        internal static ZNetwork AddElementRefBusToNewBus(this ZNetwork znw, IEZElement element)
         {
             var bus = element.ToBus;
+            // assign index to new bus
             bus.BusIndex = znw.GetNextBusIndex();
             var p = bus.BusIndex;
             znw.Z[p, p] = element.Z;
@@ -196,7 +333,7 @@ namespace EEMathLib.ShortCircuit.ZMX
         /// <summary>
         /// Case 2 : Add the next impedance element to the Z matrix
         /// </summary>
-        internal static ZNetwork AddElementNewToExistBus(this ZNetwork znw, IEZElement element)
+        internal static ZNetwork AddElementNewBusToExistBus(this ZNetwork znw, IEZElement element)
         {
             var fb = element.FromBus;
             var tb = element.ToBus;
@@ -204,6 +341,7 @@ namespace EEMathLib.ShortCircuit.ZMX
             var newBus = fb.BusIndex < 0 ? fb : tb;
 
             var p = existBus.BusIndex;
+            // assign index to new bus
             newBus.BusIndex = znw.GetNextBusIndex();
             var q = newBus.BusIndex;
 
@@ -222,7 +360,7 @@ namespace EEMathLib.ShortCircuit.ZMX
         /// <summary>
         /// Case 3 : Add the next impedance element to the Z matrix
         /// </summary>
-        internal static ZNetwork AddElementRefToExistBus(this ZNetwork znw, IEZElement element)
+        internal static ZNetwork AddElementRefBusToExistBus(this ZNetwork znw, IEZElement element)
         {
             var q = element.ToBus.BusIndex;
             var dz = MC.Build.Dense(znw.LastBusIndex + 1, 1, Complex.Zero);
@@ -245,7 +383,7 @@ namespace EEMathLib.ShortCircuit.ZMX
         /// <summary>
         /// Case 4 : Add the next impedance element to the Z matrix
         /// </summary>
-        internal static ZNetwork AddElementExistToExistBus(this ZNetwork znw, IEZElement element)
+        internal static ZNetwork AddElementExistBusToExistBus(this ZNetwork znw, IEZElement element)
         {
             var p = element.FromBus.BusIndex;
             var q = element.ToBus.BusIndex;
@@ -266,17 +404,20 @@ namespace EEMathLib.ShortCircuit.ZMX
             return znw;
         }
 
+        #endregion
+
+        #region Validation
 
         /// <summary>
         /// Validate adding impedance element as Case 1
         /// </summary>
-        internal static bool ValidateAddElementRefToNewBus(this IEZElement element) =>
+        internal static bool ValidateAddElementRefBusToNewBus(this IEZElement element) =>
             element.FromBus == null && element.ToBus.BusIndex < 0;
 
         /// <summary>
         /// Validate adding impedance element as Case 2
         /// </summary>
-        internal static bool ValidateAddElementNewToExistBus(this IEZElement element)
+        internal static bool ValidateAddElementNewBusToExistBus(this IEZElement element)
         {
             var fbIdx = element.FromBus.BusIndex;
             var tbIdx = element.ToBus.BusIndex;
@@ -287,13 +428,13 @@ namespace EEMathLib.ShortCircuit.ZMX
         /// <summary>
         /// Validate adding impedance element as Case 3
         /// </summary>
-        internal static bool ValidateAddElementRefToExistBus(this IEZElement element) =>
+        internal static bool ValidateAddElementRefBusToExistBus(this IEZElement element) =>
             element.FromBus == null && element.ToBus.BusIndex >= 0;
 
         /// <summary>
         /// Validate adding impedance element as Case 4
         /// </summary>
-        internal static bool ValidateAddElementExistToExistBus(this IEZElement element) =>
+        internal static bool ValidateAddElementExistBusToExistBus(this IEZElement element) =>
             element.FromBus.BusIndex >= 0 && element.ToBus.BusIndex >= 0;
 
         /// <summary>
@@ -316,10 +457,10 @@ namespace EEMathLib.ShortCircuit.ZMX
                 }
             return res;
         }
-
+        
         #endregion
 
-        #region Y Matrix
+        #region Build Y Matrix
 
         public static void BuildZFromYMatrix(this ZNetwork nw)
         {

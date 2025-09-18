@@ -14,7 +14,7 @@ namespace EEMathLib.ShortCircuit
         /// 3 phase symmetrical fault current at each bus.
         /// </summary>
         /// <param name="znw">Z Impedance matrix</param>
-        /// <returns>A dictionary of bus ID key and its fault curent</returns>
+        /// <returns>A dictionary of bus ID key and its fault current</returns>
         public static IDictionary<string, Complex> CalcCurrentAllBus(this ZNetwork znw)
         {
             var res = znw.Buses.Values.Aggregate(new Dictionary<string, Complex>(), (acc, bus) =>
@@ -93,7 +93,7 @@ namespace EEMathLib.ShortCircuit
             // pre-fault voltage at faulted bus
             var vf = bn.Data?.Voltage ?? 1.0;
 
-            // fault impdendance at faulted bus
+            // fault impedance at faulted bus
             var znn = znw.Z[bn.BusIndex, bn.BusIndex];
 
             var mxV = znw.Buses.Values.Aggregate(MC.Build.Dense(znw.Buses.Count, 1), (acc, bus) =>

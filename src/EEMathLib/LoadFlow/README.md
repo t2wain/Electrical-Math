@@ -8,7 +8,7 @@ Power flow analysis is based on the following equations and their derivations:
 - S = P + jQ
 - P + jQ = V * (V * Y).conjugate()
 
-Therfore, these two equations below are the basis of the load flow analysis 
+Therefore, these two equations below are the basis of the load flow analysis 
 
 - P = f(V,Y) * cos(A)
 - Q = f(V,Y) * sin(A)
@@ -22,7 +22,7 @@ where
 - P : real power
 - Q : reactive power
 
-Note, the paramater V, Y, and S are phasor quantity (magnitude, phase) which can be converted to complex value as (Real + jImaginary)
+Note, the parameter V, Y, and S are phasor quantity (magnitude, phase) which can be converted to complex value as (Real + jImaginary)
 
 ## Bus data
 
@@ -83,24 +83,24 @@ The strength of each algorithm is based on the following parameters:
 
 - Number of iteration (how quickly it converge)
 - Speed (number of calculation per iteration)
-- Computer memmory size requirement
+- Computer memory size requirement
 - Ability to converge (finding the solution)
 - Accuracy vs. Approximation
 
 Gauss-Seidel strength
-- Require less computer memmory
+- Require less computer memory
 
 Newton-Raphson strength
 - Converge more often
 - Require less number of iteration
 
 Newton-Raphson Fast-Decoupled
-- Require less computer memmory
+- Require less computer memory
 - Speed (good)
 - Approximation
 
 Newton-Raphson DC-Like
-- Require less computer memmory
+- Require less computer memory
 - Speed (better)
 - Approximation
 
@@ -110,7 +110,7 @@ There are many textbooks that provide different calculations fo the Jacobian mat
 
 ## Power Flow Code Implementation Issues
 
-The Newton-Raphson algorithm in this code-base does not provide a consistent covergence solution for various sample network data. Also, the Gauss-Seidel and Newton-Raphson algorithms may converge to different solutions for some sample network data.
+The Newton-Raphson algorithm in this code-base does not provide a consistent convergence solution for various sample network data. Also, the Gauss-Seidel and Newton-Raphson algorithms may converge to different solutions for some sample network data.
 
 ## Code Design
 

@@ -1,7 +1,7 @@
-﻿using EEMathLib.ShortCircuit.Data;
+﻿using EEMathLib.MatrixMath;
+using EEMathLib.ShortCircuit.Data;
 using MathNet.Numerics;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 using MC = MathNet.Numerics.LinearAlgebra.Matrix<System.Numerics.Complex>;
 
@@ -20,25 +20,23 @@ namespace EEMathLib.ShortCircuit
 
         static SCSComp()
         {
-            MXA = MC.Build.DenseOfRows(3, 3, new List<Complex[]>
-                {
-                    new Complex[] {1, 1, 1 },
-                    new Complex[] {1, a2, a },
-                    new Complex[] {1, a, a2 },
-                });
+            MXA = MX.BuildMX(3, 3,
+                    1, 1, 1,
+                    1, a2, a,
+                    1, a, a2
+                );
 
-            var mx2 = MC.Build.DenseOfRows(3, 3, new List<Complex[]>
-                {
-                    new Complex[] {1, 1, 1 },
-                    new Complex[] {1, a, a2 },
-                    new Complex[] {1, a2, a },
-                });
+            var mx2 = MX.BuildMX(3, 3, 
+                    1, 1, 1,
+                    1, a, a2,
+                    1, a2, a
+                );
             mx2.MapInplace(v => v / 3);
             MXAINV = mx2;
         }
 
         /// <summary>
-        /// Calculate the symmetrical components of an asymetrical value.
+        /// Calculate the symmetrical components of an asymmetrical value.
         /// </summary>
         public static ISymComp CalcSymComp(IAsymPhasor asymPhasor)
         {
@@ -48,7 +46,7 @@ namespace EEMathLib.ShortCircuit
         }
 
         /// <summary>
-        /// Calculate the asymmetrical values from the asymetrical components.
+        /// Calculate the asymmetrical values from the asymmetrical components.
         /// </summary>
         public static IAsymPhasor CalcAsymPhasor(ISymComp symComp)
         {
